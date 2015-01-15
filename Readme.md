@@ -1,11 +1,9 @@
+> This repository foked from [ben-ng/finite-automata](https://github.com/ben-ng/finite-automata) and **won't pull request**    
+> Why? code style, api, project structure and a lot are different. To thanks for the original author, so I keep the fork-info
+
 # Finite Automata
 
 An unfancy JavaScript state machine for your more ambitious project.
-
-[![Build Status](https://travis-ci.org/ben-ng/finite-automata.svg?branch=master)](https://travis-ci.org/ben-ng/finite-automata)
-
-[![browser support](https://ci.testling.com/ben-ng/finite-automata.png)
-](https://ci.testling.com/ben-ng/finite-automata)
 
 ## Features
 
