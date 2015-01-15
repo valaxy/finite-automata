@@ -1,5 +1,5 @@
 var test = require('tape')
-  , Fragment = require('../lib/fragment')
+  , Fragment = require('./fragment')
 
 test('minimize', function (t) {
   t.plan(16)

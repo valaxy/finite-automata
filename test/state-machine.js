@@ -1,6 +1,6 @@
 var test = require('tape'),
-	StateMachine = require('../lib/machine'),
-	Fragment = require('../lib/fragment')
+	StateMachine = require('./machine'),
+	Fragment = require('./fragment')
 
 
 test('StateMachine', function (assert) {

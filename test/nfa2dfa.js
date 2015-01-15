@@ -1,6 +1,6 @@
 var test = require('tape')
-  , Fragment = require('../lib/fragment')
-  , nfa2dfa = require('../lib/nfa2dfa')
+  , Fragment = require('./fragment')
+  , nfa2dfa = require('./nfa2dfa')
 
 test('nfa2dfa', function (t) {
   t.plan(5)
