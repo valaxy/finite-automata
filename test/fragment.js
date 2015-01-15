@@ -1,5 +1,5 @@
 var test = require('tape')
-	, Fragment = require('./fragment')
+	, Fragment = require('../src/fragment')
 
 test('construction', function (t) {
 
@@ -283,11 +283,4 @@ test('cow(dog)*(cat)*', function (t) {
 	t.ok(nfa.test('cowdogcat'))
 	t.ok(nfa.test('cowcat'))
 	t.ok(nfa.test('cowdogcatcat'))
-})
-
-
-test('hahahah', function (assert) {
-	assert.plan(1)
-
-
 })

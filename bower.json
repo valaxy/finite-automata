@@ -1,0 +1,20 @@
+{
+  "name": "finite-automata",
+  "version": "0.0.0",
+  "homepage": "https://github.com/valaxy/finite-automata",
+  "authors": [
+    "valaxy <valaxy.tian@gmail.com>"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "devDependencies": {
+    "seajs": "~2.3.0",
+    "qunit": "~1.16.0"
+  }
+}

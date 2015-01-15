@@ -1,10 +1,13 @@
 (function (factory) {
 	if (typeof exports === 'object') {
-		module.exports = factory()
+		var result = factory(require, exports, module)
+		if (result) {
+			module.exports = result
+		}
 	} else {
-		define(factory())
+		define(factory)
 	}
-})(function () {
+})(function (require) {
 	var Fragment
 		, StateMachine = require('./machine')
 		, _minimize = require('./minimize')
