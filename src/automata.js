@@ -8,26 +8,25 @@
 		define(factory)
 	}
 })(function () {
-	var StateMachine
-
-	StateMachine = function StateMachine(def) {
+	var Automata = function (def) {
 		this._initial = def.initial
 		this._accept = def.accept
 		this._table = this._createTable(def.transitions)
+		this.recover()
 	}
 
-	StateMachine.prototype._createTable = function _createTable(transitions) {
-		var k
-			, j = 0
-			, jj = 0
-			, chr = ''
-		// char is the column, state is the row
-			, fastTable = {}
+	Automata.createFromFragment = function (frag) {
+		return new Automata(frag.minimize())
+	}
 
-		for (k in transitions) {
+	Automata.prototype._createTable = function (transitions) {
+		var chr = ''
+			, fastTable = {} // char is the column, state is the row
+
+		for (var k in transitions) {
 			fastTable[k] = {}
 
-			for (j = 0, jj = transitions[k].length; j < jj; j += 2) {
+			for (var j = 0, jj = transitions[k].length; j < jj; j += 2) {
 				chr = transitions[k][j]
 
 				fastTable[k][chr] = transitions[k][j + 1]
@@ -37,15 +36,21 @@
 		return fastTable
 	}
 
-// 恢复到初始状态
-	StateMachine.prototype.recover = function () {
+
+	/**
+	 * change state to initial state, return this
+	 */
+	Automata.prototype.recover = function () {
 		this._state = this._initial
 		return this
 	}
 
 
-// 如果通过ch的状态不可达则返回false, 否则返回true
-	StateMachine.prototype.push = function (ch) {
+	/**
+	 * push a char to automata, change current state
+	 * @returns {boolean} if arriveable return true else return false
+	 */
+	Automata.prototype.push = function (ch) {
 		var nextState = this._table[this._state][ch]
 		if (nextState === undefined) {
 			return false
@@ -56,15 +61,22 @@
 	}
 
 
-// 判断从初始状态开始的输入流是否可接受
-	StateMachine.prototype.isAccept = function () {
+	/**
+	 * if current state is acceptable
+	 * @returns {boolean}
+	 */
+	Automata.prototype.isAcceptState = function () {
 		return this._accept.indexOf(this._state) >= 0
 	}
 
 
-	StateMachine.prototype.accepts = function exec(input) {
-
-		this._state = this._initial
+	/**
+	 * if the state acceptable
+	 * @param input
+	 * @returns {boolean}
+	 */
+	Automata.prototype.accepts = function (input) {
+		this.recover()
 
 		// EOF Testing is a special thing
 		if (input === -1) {
@@ -90,7 +102,6 @@
 		return this._accept.indexOf(this._state) >= 0
 	}
 
-	return StateMachine
+	return Automata
 })
-
 

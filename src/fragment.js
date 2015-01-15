@@ -9,7 +9,7 @@
 	}
 })(function (require) {
 	var Fragment
-		, StateMachine = require('./machine')
+		, StateMachine = require('./automata')
 		, _minimize = require('./minimize')
 		, string2dfa = require('./string2dfa')
 		, nfa2dfa = require('./nfa2dfa')
