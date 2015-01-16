@@ -1,107 +1,157 @@
-var test = require('tape')
-	, Fragment = require('../src/fragment')
+var test = require('tape'),
+	Fragment = require('../src/fragment')
 
-test('construction', function (t) {
 
-	t.plan(1)
+test('Fragment:construction', function (assert) {
+	assert.plan(1)
 
 	var frag = new Fragment({
-		initial: 'q0'
-		, accept: ['q2', 'q3']
-		, transitions: {
+		initial: 'q0',
+		accept: ['q2', 'q3'],
+		transitions: {
 			q0: [
-				'\0', 'q1'
-				, 'a', 'q2'
-			]
-			, q1: [
+				'\0', 'q1',
+				'a', 'q2'
+			],
+			q1: [
 				'b', 'q3'
-			]
-			, q2: [
+			],
+			q2: [
 				'c', 'garbage'
-			]
-			, q3: []
-			, garbage: []
+			],
+			q3: [],
+			garbage: []
 		}
 	})
 
-	t.ok(frag)
-
+	assert.ok(frag)
 })
 
-test('collisions', function (t) {
-	t.plan(4)
+
+test('Fragment#_renameState()', function (assert) {
+	assert.plan(3)
+
+	var frag = new Fragment({
+		initial: 0,
+		accept: [0, 1],
+		transitions: {
+			0: ['a', 1, 'b', 0],
+			1: ['c', 1, 'd', 0]
+		}
+	})
+
+	frag._renameState(0, 5)
+	assert.deepEqual(frag.transitions, {
+		1: ['c', 1, 'd', 5],
+		5: ['a', 1, 'b', 5]
+	})
+	assert.equal(frag.initial, 5)
+	assert.deepEqual(frag.accept, [5, 1])
+})
+
+
+test('Fragment#_findNoCollisionState', function (assert) {
+	assert.plan(2)
+
+	var frag = new Fragment({
+		initial: 0,
+		accept: [1],
+		transitions: {
+			0: ['a', 1],
+			1: []
+		}
+	})
+
+	assert.equal(frag._findNoCollisionState(0), '0`')
+	assert.equal(frag._findNoCollisionState(2), 2)
+})
+
+
+test('Fragment#_hasState()', function (assert) {
+	assert.plan(2)
+
+	var frag = new Fragment({
+		initial: 0,
+		accept: [0],
+		transitions: {
+			0: ['a', 0]
+		}
+	})
+
+	assert.ok(frag._hasState(0))
+	assert.ok(!frag._hasState(1))
+})
+
+
+test('Fragment#_resolveCollisions()|states()', function (assert) {
+	assert.plan(4)
 
 	// q0 - "a" -> q1
 	var fragment1 = new Fragment({
-			initial: 'q0'
-			, accept: ['q1']
-			, transitions: {
-				q0: [
-					'a', 'q1'
-				]
-				, q1: []
+			initial: 'q0',
+			accept: ['q1'],
+			transitions: {
+				q0: ['a', 'q1'],
+				q1: []
 			}
-		})
-		, fragment2 = new Fragment({
-			initial: 'q0'
-			, accept: ['q1']
-			, transitions: {
-				q0: [
-					'b', 'q1'
-				]
-				, q1: []
+		}),
+		fragment2 = new Fragment({
+			initial: 'q0',
+			accept: ['q1'],
+			transitions: {
+				q0: ['b', 'q1'],
+				q1: []
 			}
 		})
 
+	// if change the rename strategy, all the cases need to be change
 	fragment2._resolveCollisions(fragment1)
-	t.deepEqual(fragment2.states(), ['q0`', 'q1`']
-		, 'Should resolve initial collision with a `')
+	assert.deepEqual(fragment2.states(), ['q0`', 'q1`'], 'Should resolve initial collision with a `')
 
 	fragment2._resolveCollisions(fragment2)
-	t.deepEqual(fragment2.states(), ['q0``', 'q1``']
-		, 'Should resolve second collision with ``')
+	assert.deepEqual(fragment2.states(), ['q0``', 'q1``'], 'Should resolve second collision with ``')
 
 	fragment2._resolveCollisions(fragment2)
-	t.deepEqual(fragment2.states(), ['q0```', 'q1```']
-		, 'Should resolve third collision with ```')
+	assert.deepEqual(fragment2.states(), ['q0```', 'q1```'], 'Should resolve third collision with ```')
 
 	fragment2._resolveCollisions(fragment2)
-	t.deepEqual(fragment2.states(), ['q0````', 'q1````']
-		, 'Should resolve fourth collision with ````')
+	assert.deepEqual(fragment2.states(), ['q0````', 'q1````'], 'Should resolve fourth collision with ````')
 })
 
-test('concat', function (t) {
-	t.plan(4)
+
+test('Fragment#concat()', function (assert) {
+	assert.plan(4)
 
 	// q0 - "a" -> q1
 	var fragment1 = new Fragment({
-			initial: 'q0'
-			, accept: ['q1']
-			, transitions: {
+			initial: 'q0',
+			accept: ['q1'],
+			transitions: {
 				q0: [
 					'a', 'q1'
-				]
-				, q1: []
+				],
+				q1: []
 			}
-		})
-		, fragment2 = new Fragment({
-			initial: 'q0'
-			, accept: ['q1']
-			, transitions: {
+		}),
+		fragment2 = new Fragment({
+			initial: 'q0',
+			accept: ['q1'],
+			transitions: {
 				q0: [
 					'b', 'q1'
-				]
-				, q1: []
+				],
+				q1: []
 			}
 		})
 
 	fragment1.concat(fragment2)
 
-	t.ok(!fragment1.test('a'), 'Concat should not accept solely first dfa')
-	t.ok(!fragment1.test('b'), 'Concat should not accept solely second dfa')
-	t.ok(fragment1.test('ab'), 'Concat should accept complete dfa')
-	t.ok(!fragment1.test('abc'), 'Concat should not accept overflown dfa')
+	assert.ok(!fragment1.test('a'), 'Concat should not accept solely first dfa')
+	assert.ok(!fragment1.test('b'), 'Concat should not accept solely second dfa')
+	assert.ok(fragment1.test('ab'), 'Concat should accept complete dfa')
+	assert.ok(!fragment1.test('abc'), 'Concat should not accept overflown dfa')
 })
+
 
 test('concat state labels', function (t) {
 	t.plan(1)
@@ -112,37 +162,36 @@ test('concat state labels', function (t) {
 	t.deepEqual(fragment.toDfa().accept, ['c'], 'Accept state should keep label')
 })
 
-test('union', function (t) {
-	t.plan(4)
+test('Fragment#union()', function (assert) {
+	assert.plan(4)
 
 	var fragment1 = new Fragment({
-			// Force a collision here
-			initial: 'union`'
-			, accept: ['q1']
-			, transitions: {
+			initial: 'union`', // force a collision
+			accept: ['q1'],
+			transitions: {
 				'union`': [
 					'a', 'q1'
-				]
-				, q1: []
+				],
+				q1: []
 			}
-		})
-		, fragment2 = new Fragment({
-			initial: 'q0'
-			, accept: ['q1']
-			, transitions: {
-				q0: [
+		}),
+		fragment2 = new Fragment({
+			initial: 'union`', // force a collision
+			accept: ['q1'],
+			transitions: {
+				'union`': [
 					'b', 'q1'
-				]
-				, q1: []
+				],
+				q1: []
 			}
 		})
 
 	fragment1.union(fragment2)
 
-	t.ok(!fragment1.test(''), 'Union should not accept empty string')
-	t.ok(fragment1.test('a'), 'Union should accept solely first dfa')
-	t.ok(fragment1.test('b'), 'Union should accept solely second dfa')
-	t.ok(!fragment1.test('ab'), 'Union should not accept concatenated dfa')
+	assert.ok(!fragment1.test(''), 'Union should not accept empty string')
+	assert.ok(fragment1.test('a'), 'Union should accept solely first dfa')
+	assert.ok(fragment1.test('b'), 'Union should accept solely second dfa')
+	assert.ok(!fragment1.test('ab'), 'Union should not accept concatenated dfa')
 })
 
 test('union state labels', function (t) {

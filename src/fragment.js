@@ -46,20 +46,13 @@
 
 		this.initial = def.initial
 		this.accept = def.accept
-		this.transitions = def.transitions
+		this.transitions = def.transitions // it's matrix(邻接表)
 
 	}
 
-	Fragment.prototype.copy = function () {
-		return {
-			initial: this.initial
-			, accept: JSON.parse(JSON.stringify(this.accept))
-			, transitions: JSON.parse(JSON.stringify(this.transitions))
-		}
-	}
 
 	Fragment.prototype.toDfa = function (delimiter) {
-		return nfa2dfa(this.copy(), delimiter)
+		return nfa2dfa(this._copyConfig(), delimiter)
 	}
 
 	Fragment.prototype.minimize = function (delimiter) {
@@ -113,67 +106,69 @@
 	}
 
 	/**
-	 * Simulates this fragment on the input
+	 * @TODO Simulates this fragment on the input
 	 */
 	Fragment.prototype.test = function test(input) {
 		return new StateMachine(this.minimize()).accepts(input)
 	}
 
-	Fragment.prototype.concat = function concat(other) {
-		other = new Fragment(other.copy())
+	/**
+	 * BNF: rule = rule1 rule2
+	 */
+	Fragment.prototype.concat = function (other) {
+		other = new Fragment(other._copyConfig())
 
-		// When joining a to b, b should disambiguate itself from a
+		// when joining a to b, b should disambiguate itself from a
 		other._resolveCollisions(this)
 
-		var bInitial = other.initial
-
-		// Point the final states of a to the initial state of b
+		// point the final states of a to the initial state of b
 		for (var i = 0, ii = this.accept.length; i < ii; ++i) {
-			this.transitions[this.accept[i]].push('\0', bInitial)
+			this.transitions[this.accept[i]].push('\0', other.initial)
 		}
 
-		// Add all transitions from b to a
+		// set new accept states
+		this.accept = other.accept
+
+		// add all transitions from b to a
 		for (var k in other.transitions) {
 			this.transitions[k] = other.transitions[k]
 		}
-
-		this.accept = other.accept
 
 		return this
 	}
 
-	Fragment.prototype.union = function union(other) {
-		other = new Fragment(other.copy())
 
-		// When joining a to b, b should disambiguate itself from a
+	/**
+	 * BNF: rule = rule1 | rule2
+	 */
+	Fragment.prototype.union = function union(other) {
+		other = new Fragment(other._copyConfig())
+
+		// when joining a to b, b should disambiguate itself from a
 		other._resolveCollisions(this)
 
-		// Create a new initial state
-		var original = 'union'
-			, suffix = '`'
-			, newStateKey = original + suffix
-			, oldInitial = this.initial
+		var oldInitial = this.initial
 
-		// Watch for collisions in both sides!
-		while (this._hasState(newStateKey)) {
-			suffix = suffix + '`'
-			newStateKey = original + suffix
-		}
+		// create a new initial state
+		this.initial = this._findNoCollisionState('union')
 
-		this.initial = newStateKey
+		// watch for collisions in both sides!
+		this.initial = other._findNoCollisionState(this.initial)
 
-		// Point new state to the other two initial states with epsilon transitions
+		// point new state to the other two initial states with epsilon transitions
 		this.transitions[this.initial] = ['\0', oldInitial, '\0', other.initial]
 
-		// Add all transitions from b to a
+		// add all transitions from b to a
 		for (var k in other.transitions) {
 			this.transitions[k] = other.transitions[k]
 		}
 
+		// multiply accept states
 		this.accept.push.apply(this.accept, other.accept)
 
 		return this
 	}
+	
 
 	/**
 	 * Check out: https://cloudup.com/c64GMr1lTFj
@@ -209,79 +204,91 @@
 		return this
 	}
 
-	Fragment.prototype.states = function states() {
+
+	/**
+	 * Returns all the valid states.
+	 */
+	Fragment.prototype.states = function () {
 		return Object.keys(this.transitions)
 	}
 
-	/**
-	 * Resolves collisions with `other` by renaming `this`'s states
-	 */
-	Fragment.prototype._resolveCollisions = function _resolveCollisions(other) {
-		var states = other.states()
-			, needle
-			, original
-			, suffix
 
-		for (var i = 0, ii = states.length; i < ii; ++i) {
-			needle = states[i]
+	// return a copy of config para
+	Fragment.prototype._copyConfig = function () {
+		return {
+			initial: this.initial,
+			accept: JSON.parse(JSON.stringify(this.accept)),
+			transitions: JSON.parse(JSON.stringify(this.transitions))
+		}
+	}
 
-			if (!this._hasState(needle)) {
+
+	// Resolves collisions with `other` by renaming states of `this`
+	Fragment.prototype._resolveCollisions = function (other) {
+		var otherStates = other.states()
+
+		for (var i = 0, ii = otherStates.length; i < ii; ++i) {
+			if (!this._hasState(otherStates[i])) {
 				continue
 			}
-
-			original = needle
-			suffix = '`'
-
-			needle = original + suffix
-
-			while (this._hasState(needle)) {
-				suffix = suffix + '`'
-				needle = original + suffix
-			}
-
-			this._renameState(original, needle)
+			var newState = this._findNoCollisionState(otherStates[i])
+			this._renameState(otherStates[i], newState)
 		}
 
 		return true
 	}
 
-	Fragment.prototype._hasState = function _hasState(needle) {
-		return this.transitions[needle] != null
+
+	// judge if a state exist
+	Fragment.prototype._hasState = function (state) {
+		return this.transitions[state] != null
 	}
 
-	/**
-	 * Renames the state `from` to `to`
-	 */
-	Fragment.prototype._renameState = function _renameState(from, to) {
-		var t = this.transitions[from]
-			, i = 0
-			, ii = 0
 
+	// Renames the state `from` to `to` and delete `from`
+	// `to` must not exist
+	Fragment.prototype._renameState = function (from, to) {
+		var t = this.transitions[from]
+
+		// @TODO I don't know why need the check if it is a private method
 		if (t == null) {
 			throw new Error('The state ' + from + ' does not exist')
-		}
-
-		if (this.initial == from) {
-			this.initial = to
 		}
 
 		delete this.transitions[from]
 		this.transitions[to] = t
 
+		// change the state table
 		for (var k in this.transitions) {
-			for (i = 1, ii = this.transitions[k].length; i < ii; i += 2) {
+			for (var i = 1, ii = this.transitions[k].length; i < ii; i += 2) {
 				if (this.transitions[k][i] == from) {
 					this.transitions[k][i] = to
 				}
 			}
 		}
 
-		for (i = 0, ii = this.accept.length; i < ii; ++i) {
+		// change init state
+		if (this.initial == from) {
+			this.initial = to
+		}
+
+		// change accept state
+		for (var i = 0, ii = this.accept.length; i < ii; ++i) {
 			if (this.accept[i] == from) {
 				this.accept[i] = to
 			}
 		}
 	}
+
+
+	// find a state based `state` with no collision
+	Fragment.prototype._findNoCollisionState = function (state) {
+		while (this._hasState(state)) {
+			state += '`'
+		}
+		return state
+	}
+
 
 	return Fragment
 })
