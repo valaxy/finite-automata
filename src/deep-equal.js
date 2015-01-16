@@ -8,9 +8,7 @@
 		define(factory)
 	}
 })(function () {
-
 	function deepEqual(a, b) {
-
 		if (Object.keys(a).length != Object.keys(b).length) {
 			return false
 		}
