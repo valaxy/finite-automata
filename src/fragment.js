@@ -8,11 +8,10 @@
 		define(factory)
 	}
 })(function (require) {
-	var Fragment
-		, StateMachine = require('./automata')
-		, _minimize = require('./minimize')
-		, string2dfa = require('./string2dfa')
-		, nfa2dfa = require('./nfa2dfa')
+	var StateMachine = require('./automata'),
+		_minimize = require('./minimize'),
+		string2dfa = require('./string2dfa'),
+		nfa2dfa = require('./nfa2dfa')
 
 
 	/**
@@ -20,7 +19,7 @@
 	 * pretty expensive. There should be an option that
 	 * doesn't require such stringent checking.
 	 */
-	Fragment = function Fragment(def, acceptName) {
+	var Fragment = function Fragment(def, acceptName) {
 
 		// OK to be a string literal, we'll construct a fragment from that
 		if (typeof def == 'string') {
@@ -141,7 +140,7 @@
 	/**
 	 * BNF: rule = rule1 | rule2
 	 */
-	Fragment.prototype.union = function union(other) {
+	Fragment.prototype.union = function (other) {
 		other = new Fragment(other._copyConfig())
 
 		// when joining a to b, b should disambiguate itself from a
@@ -168,38 +167,25 @@
 
 		return this
 	}
-	
+
 
 	/**
+	 * BNF: rule = rule1*
 	 * Check out: https://cloudup.com/c64GMr1lTFj
 	 * Source: http://courses.engr.illinois.edu/cs373/sp2009/lectures/lect_06.pdf
 	 */
-	Fragment.prototype.repeat = function repeat() {
+	Fragment.prototype.repeat = function () {
+		// create a new initial state
+		var newState = this._findNoCollisionState('repeat`') // @TODO fail when use repeat
 
-		// Create a new initial state
-		var original = 'repeat'
-			, suffix = '`'
-			, newStateKey = original
-
-
-		suffix = '`'
-
-		newStateKey = original + suffix
-
-		while (this._hasState(newStateKey)) {
-			suffix = suffix + '`'
-			newStateKey = original + suffix
-		}
-
-		// Point the final states to the initial state of b
+		// point the final states to the initial state of b
 		for (var i = 0, ii = this.accept.length; i < ii; ++i) {
 			this.transitions[this.accept[i]].push('\0', this.initial)
 		}
 
-		this.transitions[newStateKey] = ['\0', this.initial]
-
-		this.initial = newStateKey
-		this.accept.push(newStateKey)
+		this.transitions[newState] = ['\0', this.initial]
+		this.initial = newState
+		this.accept.push(newState)
 
 		return this
 	}
@@ -241,7 +227,7 @@
 
 	// judge if a state exist
 	Fragment.prototype._hasState = function (state) {
-		return this.transitions[state] != null
+		return state in this.transitions[state]
 	}
 
 

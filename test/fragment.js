@@ -162,6 +162,7 @@ test('concat state labels', function (t) {
 	t.deepEqual(fragment.toDfa().accept, ['c'], 'Accept state should keep label')
 })
 
+
 test('Fragment#union()', function (assert) {
 	assert.plan(4)
 
@@ -193,6 +194,48 @@ test('Fragment#union()', function (assert) {
 	assert.ok(fragment1.test('b'), 'Union should accept solely second dfa')
 	assert.ok(!fragment1.test('ab'), 'Union should not accept concatenated dfa')
 })
+
+
+test('Fragment#repeat()', function (assert) {
+	assert.plan(10)
+
+	// a*
+	var frag = new Fragment({
+		initial: 0,
+		accept: [1],
+		transitions: {
+			0: ['a', 1],
+			1: []
+		}
+	})
+
+	frag.repeat()
+	assert.ok(frag.test(''), 'Should accept empty string')
+	assert.ok(frag.test('a'))
+	assert.ok(frag.test('aaaa'))
+	assert.ok(!frag.test('ba'))
+
+
+	// (a|b)*
+	var frag = new Fragment({
+		initial: 0,
+		accept: [1, 2],
+		transitions: {
+			0: ['a', 1, 'b', 2],
+			1: [],
+			2: []
+		}
+	})
+
+	frag.repeat()
+	assert.ok(frag.test(''), 'Should accept empty string')
+	assert.ok(frag.test('a'))
+	assert.ok(frag.test('b'))
+	assert.ok(frag.test('aaa'))
+	assert.ok(frag.test('bbb'))
+	assert.ok(frag.test('ababa'))
+})
+
 
 test('union state labels', function (t) {
 	t.plan(1)
@@ -301,7 +344,7 @@ test('(a|b)*c*(d|e)', function (t) {
 			}
 		})
 
-	// WOAAAH
+	// WOAAAH?
 	a.union(b).repeat().concat(c.repeat()).concat(d.union(e))
 
 	t.ok(!a.test(''), 'DFA should not accept empty string')
