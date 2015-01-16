@@ -227,7 +227,7 @@
 
 	// judge if a state exist
 	Fragment.prototype._hasState = function (state) {
-		return state in this.transitions[state]
+		return state in this.transitions
 	}
 
 
