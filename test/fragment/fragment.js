@@ -1,5 +1,5 @@
 var test = require('tape'),
-	Fragment = require('../src/fragment')
+	Fragment = require('../../src/fragment')
 
 
 test('Fragment:construction', function (assert) {
@@ -116,6 +116,14 @@ test('Fragment#_resolveCollisions()|states()', function (assert) {
 
 	fragment2._resolveCollisions(fragment2)
 	assert.deepEqual(fragment2.states(), ['q0````', 'q1````'], 'Should resolve fourth collision with ````')
+})
+
+
+test('Fragment#empty string', function (assert) {
+	assert.plan(1)
+
+	var frag = new Fragment('')
+	assert.ok(frag.test(''), 'Should accept empty string')
 })
 
 
@@ -375,4 +383,37 @@ test('cow(dog)*(cat)*', function (t) {
 	t.ok(nfa.test('cowdogcat'))
 	t.ok(nfa.test('cowcat'))
 	t.ok(nfa.test('cowdogcatcat'))
+})
+
+test('Fragment#repeatAtleastOnce()', function (assert) {
+	assert.plan(3)
+	var frag = new Fragment('ab')
+	frag.repeatAtLeastOnce()
+
+	assert.ok(frag.test('ab'))
+	assert.ok(frag.test('abab'))
+	assert.ok(!frag.test(''))
+})
+
+test('Fragment.createSingleAlphaChar()', function (assert) {
+	assert.plan(6)
+	var frag = Fragment.createSingleAlphaChar()
+
+	assert.ok(frag.test('a'))
+	assert.ok(frag.test('z'))
+	assert.ok(frag.test('A'))
+	assert.ok(frag.test('Z'))
+	assert.ok(!frag.test('!'))
+	assert.ok(!frag.test('aa'))
+})
+
+
+test('Fragment.createSingleNumber()', function (assert) {
+	assert.plan(4)
+	var frag = Fragment.createSingleNumber()
+
+	assert.ok(frag.test('0'))
+	assert.ok(frag.test('9'))
+	assert.ok(!frag.test('a'))
+	assert.ok(!frag.test('01'))
 })

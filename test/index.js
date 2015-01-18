@@ -1,5 +1,5 @@
 require('./errors')
-require('./fragment')
+require('./fragment/fragment')
 require('./string2dfa')
 require('./nfa2dfa')
 require('./minimize')
