@@ -8,6 +8,14 @@
 		define(factory)
 	}
 })(function () {
+
+	/**
+	 * initial: xx
+	 * accept: xx
+	 * transitions: xx
+	 * @param def
+	 * @constructor
+	 */
 	var Automata = function (def) {
 		this._initial = def.initial
 		this._accept = def.accept
@@ -15,21 +23,20 @@
 		this.recover()
 	}
 
-	Automata.createFromFragment = function (frag) {
-		return new Automata(frag.minimize())
-	}
+	Automata.EOF = -1
 
+
+	// create a matix
 	Automata.prototype._createTable = function (transitions) {
-		var chr = ''
-			, fastTable = {} // char is the column, state is the row
+		// char is the column, state is the row
+		var fastTable = {}
 
-		for (var k in transitions) {
-			fastTable[k] = {}
+		for (var state in transitions) {
+			fastTable[state] = {}
 
-			for (var j = 0, jj = transitions[k].length; j < jj; j += 2) {
-				chr = transitions[k][j]
-
-				fastTable[k][chr] = transitions[k][j + 1]
+			for (var j = 0, jj = transitions[state].length; j < jj; j += 2) {
+				var chr = transitions[state][j]
+				fastTable[state][chr] = transitions[state][j + 1]
 			}
 		}
 
@@ -79,23 +86,19 @@
 		this.recover()
 
 		// EOF Testing is a special thing
-		if (input === -1) {
-			return this._table[this._state][-1] != null &&
+		if (input === Automata.EOF) {
+			return this._table[this._state][Automata.EOF] != null &&
 				this._accept.indexOf(this._table[this._state][-1]) > -1
 		}
 
-		var i = 0
-			, ii = input.length
-			, result = 0
 
-		for (; i < ii; ++i) {
-			result = this._table[this._state][input.charAt(i)]
+		for (var i = 0, ii = input.length; i < ii; ++i) {
+			var next = this._table[this._state][input.charAt(i)]
 
-			if (result === undefined) {
+			if (next === undefined) {
 				return false
-			}
-			else {
-				this._state = result
+			} else {
+				this._state = next
 			}
 		}
 

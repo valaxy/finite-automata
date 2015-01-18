@@ -2,9 +2,11 @@ var test = require('tape'),
 	Automata = require('../src/automata'),
 	Fragment = require('../src/fragment')
 
-
 test('Automata#accepts()', function (assert) {
-	var machine = Automata.createFromFragment(new Fragment({
+	assert.plan(4)
+
+	// abc
+	var machine = new Automata({
 		initial: 0,
 		accept: [3],
 		transitions: {
@@ -13,16 +15,28 @@ test('Automata#accepts()', function (assert) {
 			2: ['c', 3],
 			3: []
 		}
-	}))
+	})
 
-	assert.plan(2)
 	assert.equal(machine.accepts('abc'), true)
 	assert.equal(machine.accepts('ab'), false)
+	assert.equal(machine.accepts(''), false)
+
+	// empty string
+	var machine = new Automata({
+		initial: 0,
+		accept: [0],
+		transitions: {
+			0: [],
+			1: ['a', 0]
+		}
+	})
+
+	assert.equal(machine.accepts(''), true)
 })
 
 
 test('Automata#push()/isAcceptState()', function (assert) {
-	var machine = Automata.createFromFragment(new Fragment({
+	var machine = new Automata({
 		initial: 0,
 		accept: [2],
 		transitions: {
@@ -30,7 +44,7 @@ test('Automata#push()/isAcceptState()', function (assert) {
 			1: ['b', 2],
 			2: []
 		}
-	}))
+	})
 
 	assert.plan(6)
 	assert.equal(machine.isAcceptState(), false)
