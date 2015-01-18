@@ -8,34 +8,26 @@
 		define(factory)
 	}
 })(function () {
+
+	// str: the string to match
+	// acceptName: optional
 	function string2dfa(str, acceptName) {
-		var cur
-			, def = {
-				initial: 0
-				, accept: [acceptName ? acceptName : str.length]
-				, transitions: {}
-			}
-			, i = 0
-			, ii = str.length
+		var acceptName = acceptName ? acceptName : str.length
+		var transitions = {}
 
-		if (acceptName) {
-			for (; i < ii - 1; ++i) {
-				cur = str.charAt(i)
-				def.transitions[i] = [cur, i + 1]
-			}
-			def.transitions[i] = [str.charAt(i), acceptName]
-			def.transitions[acceptName] = []
+		for (var i = 0, ii = str.length - 1; i < ii; ++i) {
+			transitions[i] = [str.charAt(i), i + 1]
 		}
-		else {
-			for (; i < ii; ++i) {
-				cur = str.charAt(i)
-				def.transitions[i] = [cur, i + 1]
-			}
-			def.transitions[i] = []
-		}
+		transitions[i] = [str.charAt(i), acceptName]
+		transitions[acceptName] = []
 
-		return def
+		return {
+			initial: 0,
+			accept: [acceptName],
+			transitions: transitions
+		}
 	}
+
 
 	return string2dfa
 })

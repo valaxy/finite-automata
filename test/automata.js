@@ -1,6 +1,5 @@
 var test = require('tape'),
-	Automata = require('../src/automata'),
-	Fragment = require('../src/fragment')
+	Automata = require('../src/automata')
 
 test('Automata#accepts()', function (assert) {
 	assert.plan(4)
