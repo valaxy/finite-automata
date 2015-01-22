@@ -8,15 +8,77 @@
 		define(factory)
 	}
 })(function (require) {
-	var deepEqual = require('./deep-equal')
+	var Group = require('./partition')
+	var Set = require('./set')
+
+
+	// table是邻接矩阵, 根据table, 去掉了重复的状态, 返回不重复的状态
+	// 有几个元素就有几个决然不相同的状态
+	// 划分组
+	function partition(table) {
+		// 随便找到一个状态
+		var anyState = Object.keys(table)[0]
+
+		// 是一个数组, 元素表示状态的集合, 这个集合里的状态是可以合并的状态
+		//  元素: 这个状态的转换表, 状态1, 状态2, ...
+		var anyGroup = new Group(table[anyState]).addState(anyState)
+		var subGroups = [anyGroup]
+		delete table[anyState]
+
+		for (var state in table) {
+			var row = table[state]
+			var found = false
+
+			// 找到相同的状态, 指出边情况一致
+			for (var j in subGroups) {
+				var group = subGroups[j]
+				if (group.isSameGroup(row)) {
+					group.addState(state)
+					found = true
+					break
+				}
+			}
+
+			if (!found) {
+				subGroups.push(new Group(row).addState(state))
+			}
+		}
+
+		return subGroups
+	}
+
+
+	// return the i which marks[i] is false or -1
+	function getUnmarkIndex(marks) {
+		for (var i in marks) {
+			if (!marks[i]) {
+				return i
+			}
+		}
+
+		return -1
+	}
+
+
+	function createUnmarkArray(length) {
+		var marks = new Array(length)
+		for (var i = 0, ii = marks.length; i < ii; ++i) {
+			marks[i] = false
+		}
+		return marks
+	}
+
+
+	function copy(ary) {
+		var a = new Array(ary.length)
+		for (var i = 0; i < ary.length; i++) {
+			a[i] = ary[i]
+		}
+		return a
+	}
+
 
 	function minimize(dfa) {
-		// each element of groups is a array
-		// the array contains states that are same which can be zipped into one state
-		var groups = []
-		var marks = [false, false] // two element???
-		var stateToGroupMap = {}
-
 
 		function buildStateToGroupMap() {
 			stateToGroupMap = {}
@@ -31,61 +93,17 @@
 		}
 
 
-		// return the i which marks[i] is false or -1
-		function getUnmarkedIndex(marks) {
-			for (var i in marks) {
-				if (!marks[i]) {
-					return i
-				}
-			}
-
-			return -1
-		}
-
-
-		// 根据二维矩阵, 去掉了重复的状态, 返回不重复的状态
-		// 有几个元素就有几个决然不相同的状态
-		function partition(table) {
-			var firstState = Object.keys(table)[0]
-
-			// 是一个数组, 元素表示状态的集合, 这个集合里的状态是可以合并的状态
-			//  元素: 这个状态的转换表, 状态1, 状态2, ...
-			var subGroups = [[table[firstState], firstState]]
-
-			delete table[firstState]
-
-			for (var k in table) {
-				var row = table[k]
-				var found = false
-
-				// 找到相同的状态, 指出边情况一致
-				for (var j in subGroups) {
-					if (deepEqual(row, subGroups[j][0])) {
-						subGroups[j].push(k)
-						found = true
-						break
-					}
-				}
-
-				if (!found) {
-					subGroups.push([row, k])
-				}
-			}
-
-			return subGroups
-		}
-
-
 		// 判断 states 里的状态是否一致
-		// 一致则返回true, 否则返回false
+		// 一致则返回true, 否则返回这个划分
 		function isConsistent(states) {
 			var table = {}
 
+			// 如果这个分划只有一个状态, 那么这个分划一定是最终分划
 			if (states.length === 1) {
 				return true
 			}
 
-			// 邻接表转化为table
+			// 邻接表转化为邻接矩阵
 			// table: 一维是状态, 二维是字母, 值是指向状态所属group-index
 			// table contains all states of one group
 			for (var i in states) {
@@ -98,9 +116,10 @@
 				}
 			}
 
+			// 获得了该分组的划分
 			var partitions = partition(table)
 
-			if (partitions.length === 1) { // 只有一个不重复的状态
+			if (partitions.length === 1) { // 只有一个分组, 说明所有状态都可以放到这个组里
 				return true
 			} else {
 				return partitions // 返回这些状态
@@ -108,26 +127,33 @@
 		}
 
 
+		// each element of groups is a array
+		// the array contains states that are same which can be zipped into one state
+		var groups = []
+		var marks = createUnmarkArray(2) // for accept-states/common-states
+		var stateToGroupMap = {}
+
+
 		// groups is a map array, map new state to old state
 		// group[0] is about accept states
 		// group[1] is about no-accept states
-		groups[0] = dfa.accept // Accepting States
-		groups[1] = []         // Rejecting states
+		groups[0] = copy(dfa.accept) // Accepting States, 这里只
+		groups[1] = []               // Rejecting states
 
 
 		// put all the states to group[0] or group[1]
-		for (var k in dfa.transitions) {
-			if (groups[0].indexOf(k) < 0) {
-				groups[1].push(k)
-				stateToGroupMap[k] = 1
+		for (var state in dfa.transitions) {
+			if (groups[0].indexOf(state) < 0) {
+				groups[1].push(state)
+				stateToGroupMap[state] = 1
 			} else {
-				stateToGroupMap[k] = 0
+				stateToGroupMap[state] = 0
 			}
 		}
 
 
 		while (true) {
-			var groupIndex = getUnmarkedIndex(marks)
+			var groupIndex = getUnmarkIndex(marks)
 
 			if (groupIndex < 0) {
 				break
@@ -140,17 +166,14 @@
 			} else {
 				groups.splice(groupIndex, 1) // delete the group
 
-				for (var i = 0, ii = partitions.length; i < ii; ++i) {
-					groups.push(partitions[i].slice(1)) // 只保留状态数组
+				for (var i in partitions) {
+					groups.push(partitions[i].states())
 				}
 
 				buildStateToGroupMap()
 
 				// Unmark everything again
-				marks = new Array(groups.length)
-				for (var i = 0, ii = marks.length; i < ii; ++i) {
-					marks[i] = false
-				}
+				marks = createUnmarkArray(groups.length)
 			}
 		}
 
@@ -162,13 +185,17 @@
 		 */
 
 		// Map accept states back to themselves
-		for (var i = 0, ii = dfa.accept.length; i < ii; ++i) {
-			var state = dfa.accept[i]
-			var groupIndex = stateToGroupMap[state]
+		for (var i in dfa.accept) {
+			// 这里有一个问题就是: 假如有多个接受状态在一个组里
+			// 那么, 它们的groupIndex相同
+			// 虽然有多个接受状态会被处理,
+			// 但所有状态对该groupIndex的指向最终会指向最后一个被处理的接受状态
+			var acceptState = dfa.accept[i]
+			var groupIndex = stateToGroupMap[acceptState]
 
 			for (var k in stateToGroupMap) {
 				if (stateToGroupMap[k] === groupIndex) {
-					stateToGroupMap[k] = state
+					stateToGroupMap[k] = acceptState
 				}
 			}
 		}
@@ -178,16 +205,14 @@
 		dfa.initial = stateToGroupMap[dfa.initial]
 
 		// Dedupe merged accept states
-		var newAccept = []
-		for (var i = 0, ii = dfa.accept.length; i < ii; ++i) {
-			var temp = stateToGroupMap[dfa.accept[i]]
-
-			if (newAccept.indexOf(temp) < 0) {
-				newAccept.push(temp)
-			}
+		var newAcceptSet = new Set
+		for (var i in dfa.accept) {
+			var groupIndex = stateToGroupMap[dfa.accept[i]]
+			newAcceptSet.add(groupIndex)
 		}
 
-		dfa.accept = newAccept
+		dfa.accept = newAcceptSet.toArray()
+
 
 		var newTransitions = {}
 		var aliasMap = {}
