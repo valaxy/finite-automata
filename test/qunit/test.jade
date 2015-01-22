@@ -9,10 +9,13 @@ html
         div#qunit-fixture
 
         script(src="../../bower_components/qunit/qunit/qunit.js")
-        script(src="../../bower_components/seajs/dist/sea.js")
+        script(src="../../bower_components/requirejs/require.js")
 
         // startup
         script.
-            seajs.use(['./test'], function (test) {
-                test.init()
+            require.config({
+                baseUrl: '../../'
+            })
+            require(['test/qunit/test'], function () {
+                // do nothing
             })

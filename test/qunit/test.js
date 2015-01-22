@@ -1,5 +1,4 @@
-define(function (require, exports) {
-	exports.init = function () {
-		require('./fragment')
-	}
+define(function (require) {
+	require('./fragment')
+	require('./minimize')
 })

@@ -14,7 +14,8 @@
     "tests"
   ],
   "devDependencies": {
-    "seajs": "~2.3.0",
-    "qunit": "~1.16.0"
+    "qunit": "~1.16.0",
+    "graph": "https://github.com/valaxy/graph.git",
+    "requirejs": "~2.1.15"
   }
 }
