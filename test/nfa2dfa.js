@@ -3,18 +3,18 @@ var test = require('tape'),
 	nfa2dfa = require('../src/nfa2dfa'),
 	Automata = require('../src/automata')
 
-test('nfa2dfa:empty string', function (assert) {
-	assert.plan(1)
-
-	var automata = new Automata(nfa2dfa(new Fragment({
-		initial: 0,
-		accept: [0],
-		transitions: {
-			0: []
-		}
-	})))
-	assert.ok(automata.accepts(''))
-})
+//test('nfa2dfa:empty string', function (assert) {
+//	assert.plan(1)
+//
+//	var automata = new Automata(nfa2dfa(new Fragment({
+//		initial: 0,
+//		accept: [0],
+//		transitions: {
+//			0: []
+//		}
+//	})))
+//	assert.ok(automata.accepts(''))
+//})
 
 test('nfa2dfa', function (t) {
 	t.plan(5)
