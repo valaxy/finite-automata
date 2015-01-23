@@ -15,7 +15,11 @@
   ],
   "devDependencies": {
     "qunit": "~1.16.0",
-    "graph": "https://github.com/valaxy/graph.git",
     "requirejs": "~2.1.15"
+  },
+  "dependencies": {
+    "candy.js": "valaxy/candy.js",
+    "graph": "valaxy/graph",
+    "underscore": "~1.7.0"
   }
 }
