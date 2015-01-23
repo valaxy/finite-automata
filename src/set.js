@@ -45,6 +45,18 @@
 		return true
 	}
 
+
+	Set.prototype.each = function (operation) {
+		for (var i in this._elements) {
+			var element = this._elements[i]
+			if (operation(element)) {
+				return true
+			}
+		}
+		return false
+	}
+	
+
 	Set.prototype.toArray = function () {
 		return [].concat(this._elements)
 	}

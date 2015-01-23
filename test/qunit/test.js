@@ -5,7 +5,7 @@ define(function (require) {
 	require('./stack-generate')
 	require('./set')
 
-	require('./nfa2dfa')
+	require('./nfaToDFA')
 	require('./string2dfa')
 	require('./deep-equal')
 	require('./eof')
