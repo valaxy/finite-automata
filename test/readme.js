@@ -1,7 +1,7 @@
 /* jshint evil:true */
 
 var test = require('tape')
-  , Fragment = require('./fragment/fragment')
+  , Fragment = require('../src/fragment')
 
 test('readme demo', function (t) {
   t.plan(2)

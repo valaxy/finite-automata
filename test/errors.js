@@ -1,5 +1,5 @@
 var test = require('tape')
-  , Fragment = require('./fragment/fragment')
+  , Fragment = require('../src/fragment')
 
 test('errors', function (t) {
 

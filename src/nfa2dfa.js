@@ -7,7 +7,8 @@
 	} else {
 		define(factory)
 	}
-})(function () {
+})(function (require) {
+	var stackGenerate = require('./stack-generate')
 
 	function nfa2dfa(frag, delimiter) {
 
@@ -165,21 +166,57 @@
 				discoveredState = goesTo(current, exitChars[i])
 				discoveredStateKey = discoveredState.join(delimiter)
 
-				if (!transitionTable[discoveredStateKey] && discoveredStateKey != currentStateKey) {
-					processStack.push(discoveredState)
-				}
-
 				// A macrostate is an accept state if it contains any accept microstate
 				for (j = 0, jj = discoveredState.length; j < jj; ++j) {
 					if (frag.accept.indexOf(discoveredState[j]) >= 0 &&
 						acceptStates.indexOf(discoveredStateKey) < 0) {
 						acceptStates.push(discoveredStateKey)
+						break
 					}
 				}
 
 				transitionTable[currentStateKey].push(exitChars[i], discoveredStateKey)
+
+				if (!transitionTable[discoveredStateKey]) {
+					processStack.push(discoveredState)
+				}
 			}
 		}
+
+		//var currentStateKey
+		//stackGenerate({
+		//	initial: processStack,
+		//	pop: function (current) {
+		//		currentStateKey = current.join(delimiter)
+		//		transitionTable[currentStateKey] = []
+		//	},
+		//	next: function (current) {
+		//		var nexts = []
+		//		var exitChars = exits(current)
+		//		for (var i = 0, ii = exitChars.length; i < ii; ++i) {
+		//			var discoveredState = goesTo(current, exitChars[i])
+		//			nexts.push(discoveredState)
+		//		}
+		//		return nexts
+		//	},
+		//	push: function (discoveredState) {
+		//		var discoveredStateKey = discoveredState.join(delimiter)
+		//
+		//		// A macrostate is an accept state if it contains any accept microstate
+		//		for (var j = 0, jj = discoveredState.length; j < jj; ++j) {
+		//			if (frag.accept.indexOf(discoveredState[j]) >= 0 &&
+		//				acceptStates.indexOf(discoveredStateKey) < 0) {
+		//				acceptStates.push(discoveredStateKey)
+		//				break
+		//			}
+		//		}
+		//
+		//		transitionTable[currentStateKey].push(exitChars[i], discoveredStateKey)
+		//
+		//		return !transitionTable[discoveredStateKey]
+		//	}
+		//})
+
 
 		/*
 		 * At this point we actually have a correct DFA, and the rest of this logic is just cleaning up
