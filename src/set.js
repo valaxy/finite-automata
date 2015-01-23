@@ -11,29 +11,51 @@
 
 	// 集合
 	var Set = function () {
-		this._ary = []
+		this._elements = []
 	}
 
-	Set.prototype.add = function (ele) {
-		for (var i = 0; i < this._ary.length; i++) {
-			if (this._ary[i] === ele) {
+	Set.createByArray = function (elements) {
+		var s = new Set
+		for (var i in elements) {
+			s.add(elements[i])
+		}
+		return s
+	}
+
+
+	Set.prototype.has = function (element) {
+		return this._elements.indexOf(element) >= 0
+	}
+
+	Set.prototype.hasOneOf = function (elements) {
+		for (var i in elements) {
+			if (this.has(elements[i])) {
+				return true
+			}
+		}
+		return false
+	}
+
+	Set.prototype.hasAll = function (elements) {
+		for (var i in elements) {
+			if (!this.has(elements[i])) {
 				return false
 			}
 		}
-		this._ary.push(ele)
 		return true
 	}
 
 	Set.prototype.toArray = function () {
-		return this._ary
+		return [].concat(this._elements)
 	}
 
-	Set.prototype.canAdd = function (ele) {
-		for (var i = 0; i < this._ary.length; i++) {
-			if (this._ary[i] === ele) {
+	Set.prototype.add = function (element) {
+		for (var i in this._elements) {
+			if (this._elements[i] === element) {
 				return false
 			}
 		}
+		this._elements.push(element)
 		return true
 	}
 

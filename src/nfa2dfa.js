@@ -9,6 +9,8 @@
 	}
 })(function (require) {
 	var stackGenerate = require('./stack-generate')
+	var Set = require('./set')
+	var Graph = require('bower_components/graph/src/directed-linked-graph')
 
 	function nfa2dfa(frag, delimiter) {
 
@@ -152,6 +154,16 @@
 			, collisionMap = {}
 			, aliasMap = {}
 
+
+		var createDFAState = function (nfaStates) {
+			return {
+				_key: nfaStates.join(delimiter),
+				key: function () {
+					this._key
+				}
+			}
+		}
+
 		// Build the transition table
 		while (processStack.length > 0) {
 			current = processStack.pop()
@@ -228,33 +240,33 @@
 		 * then we should replace its name with the name of that state
 		 * so that the labels make sense
 		 */
-		for (k in transitionTable) {
+		for (var k in transitionTable) {
 			// Build an array of states in this macrostate that are accept states
-			var states = k.split(delimiter)
-				, accepted = []
+			var dfaState = k.split(delimiter),
+				nfaAcceptStateInDFA = []
 
-			for (i = 0, ii = states.length; i < ii; ++i) {
-				if (frag.accept.indexOf(states[i]) > -1) {
-					accepted.push(states[i])
+
+			for (var i in dfaState) {
+				if (frag.accept.indexOf(dfaState[i]) > -1) {
+					nfaAcceptStateInDFA.push(dfaState[i])
 				}
 			}
 
 			// This macrostate only has one accepted state
-			if (accepted.length === 1) {
-				accepted = accepted[0]
+			if (nfaAcceptStateInDFA.length === 1) {
+				nfaAcceptStateInDFA = nfaAcceptStateInDFA[0]
 				// Check for a collision
-				if (collisionMap[accepted] != null) {
-					delete replacementMap[collisionMap[accepted]]
-				}
-				else {
-					replacementMap[k] = accepted
-					collisionMap[accepted] = k
+				// @TODO 这里又问题, 还是有可能加进来
+				if (collisionMap[nfaAcceptStateInDFA] != null) { // 这个接受状态在其他集合里又出现了, 所以去掉冲突
+					delete replacementMap[collisionMap[nfaAcceptStateInDFA]]
+				} else {
+					replacementMap[k] = nfaAcceptStateInDFA  // k替换到原始的名字
+					collisionMap[nfaAcceptStateInDFA] = k
 				}
 			}
 		}
 
 		// At this point, replacementMap is {findstate: replacementstate}
-
 		// Go on and replace findstate with replacementstate everywhere in the DFA
 
 		replacement = replacementMap[initialStateKey]
@@ -263,28 +275,24 @@
 			initialStateKey = replacement
 		}
 
-		for (k in transitionTable) {
-			transitions = transitionTable[k]
+		// 将状态替换掉
+		for (var k in transitionTable) {
+			var transition = transitionTable[k]
 
-			for (j = 1, jj = transitions.length; j < jj; j += 2) {
-				replacement = replacementMap[transitions[j]]
-
-				if (replacement != null) {
-					transitions[j] = replacement
+			for (j = 1, jj = transition.length; j < jj; j += 2) {
+				if (transition[j] in replacementMap) {
+					transition[j] = replacementMap[transition[j]]
 				}
 			}
 
-			replacement = replacementMap[k]
-
-			if (replacement != null) {
-				newTransitionTable[replacement] = transitions
-			}
-			else {
-				newTransitionTable[k] = transitions
+			if (k in replacementMap) {
+				newTransitionTable[replacementMap[k]] = transition
+			} else {
+				newTransitionTable[k] = transition
 			}
 		}
 
-		for (j = 0, jj = acceptStates.length; j < jj; ++j) {
+		for (var j = 0, jj = acceptStates.length; j < jj; ++j) {
 			replacement = replacementMap[acceptStates[j]]
 			if (replacement != null) {
 				if (tempAcceptStates.indexOf(replacement) < 0) {
@@ -312,10 +320,10 @@
 
 		// Return the definition
 		return {
-			initial: initialStateKey
-			, accept: tempAcceptStates
-			, transitions: newTransitionTable
-			, aliasMap: aliasMap
+			initial: initialStateKey,
+			accept: tempAcceptStates,
+			transitions: newTransitionTable,
+			aliasMap: aliasMap
 		}
 	}
 

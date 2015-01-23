@@ -1,7 +1,0 @@
-require('./errors')
-require('./fragment/fragment')
-require('./string2dfa')
-require('./nfa2dfa')
-require('./minimize')
-require('./readme')
-require('./eof')

@@ -22,7 +22,6 @@ define(function (require) {
 			}
 		})
 
-		console.log(result)
 		assert.ok(true)
 	})
 })
