@@ -32,16 +32,16 @@
 
 	// returns the closure of the state
 	// this means all states reachable via epsilon-transitions
-	// initState can be array or just a state
+	// initStates can be array or just a state
 	// 从初始状态开始只通过'空字符'转换到达的状态集合
-	function closureOf(initState, graph) {
+	function closureOf(initStates, graph) {
 		var stateMark = {}
-		for (var i in [].concat(initState)) {
-			stateMark[initState[i]] = true
+		for (var i in [].concat(initStates)) {
+			stateMark[initStates[i]] = true
 		}
 
 		stackGenerate({
-			initial: initState,
+			initial: initStates,
 			next: function (state) {
 				var nextStates = []
 				graph.eachEdge(function (from, to, edge) {
@@ -77,6 +77,7 @@
 		 * because the subset construction creates states
 		 * that are the union of other states
 		 */
+		// 这是个错的啊, 怎么会返回数字呢
 		function closureOf000(state) {
 			var closure = [].concat(state)
 
@@ -106,11 +107,7 @@
 			return closure.sort()
 		}
 
-		/**
-		 * State is singular but actually an array of states
-		 * because the subset construction creates states
-		 * that are the union of other states
-		 */
+
 		function goesTo2(states, chr, graph) {
 			var s = new Set
 
@@ -123,6 +120,10 @@
 				}, state)
 			}
 
+			//console.log(closureOf000(s.toArray()))
+			//console.log(closureOf(s.toArray(), graph))
+
+			//return closureOf(s.toArray(), graph)
 			return closureOf000(s.toArray())
 		}
 
@@ -140,33 +141,16 @@
 		}
 
 
-		var graph = Graph.fromJSON(frag.transitions)
-
 		// Start algorithm by computing the closure of state 0
-		var processStack = [closureOf([frag.initial], graph)]
-			, initialStateKey = processStack[0].join(delimiter)
-			, replacement
-			, replacementMap = {}
-			, inverseReplacementMap = {}
-
-			, collisionMap = {}
-			, aliasMap = {}
-
-
-		var createDFAState = function (nfaStates) {
-			return {
-				_key: nfaStates.join(delimiter),
-				key: function () {
-					this._key
-				}
-			}
-		}
+		var graph = Graph.fromJSON(frag.transitions)
+		var processStack = [closureOf([frag.initial], graph)],
+			initialStateKey = processStack[0].join(delimiter)
 
 
 		// Build the transition table
 		var graph2 = new Graph,
 			map = {},
-			acceptDFAStates = new Set
+			acceptDFAStates = new Set // DFA State is an array of states of NFA
 		while (processStack.length > 0) {
 			var currentDFAState = processStack.pop()
 			var currentDFAStateKey = currentDFAState.join(delimiter)
@@ -196,42 +180,6 @@
 			})
 		}
 		var transitionTable = graph2.toJSON()
-		acceptDFAStates = acceptDFAStates.toArray()
-
-
-		//var currentStateKey
-		//stackGenerate({
-		//	initial: processStack,
-		//	pop: function (current) {
-		//		currentStateKey = current.join(delimiter)
-		//		transitionTable[currentStateKey] = []
-		//	},
-		//	next: function (current) {
-		//		var nexts = []
-		//		var exitChars = exits(current)
-		//		for (var i = 0, ii = exitChars.length; i < ii; ++i) {
-		//			var discoveredState = goesTo(current, exitChars[i])
-		//			nexts.push(discoveredState)
-		//		}
-		//		return nexts
-		//	},
-		//	push: function (discoveredState) {
-		//		var discoveredStateKey = discoveredState.join(delimiter)
-		//
-		//		// A macrostate is an accept state if it contains any accept microstate
-		//		for (var j = 0, jj = discoveredState.length; j < jj; ++j) {
-		//			if (frag.accept.indexOf(discoveredState[j]) >= 0 &&
-		//				acceptStates.indexOf(discoveredStateKey) < 0) {
-		//				acceptStates.push(discoveredStateKey)
-		//				break
-		//			}
-		//		}
-		//
-		//		transitionTable[currentStateKey].push(exitChars[i], discoveredStateKey)
-		//
-		//		return !transitionTable[discoveredStateKey]
-		//	}
-		//})
 
 
 		/*
@@ -239,11 +187,14 @@
 		 * the compound states into something more human readable
 		 */
 
+
 		/*
-		 * If a macrostate contains only one originally accepted state
+		 * If a DFA state contains only one originally accepted state
 		 * then we should replace its name with the name of that state
 		 * so that the labels make sense
 		 */
+		var replacementMap = {},
+			collisionMap = {}
 		for (var dfaStateKey in transitionTable) {
 			// Build an array of states in this macrostate that are accept states
 			var dfaState = dfaStateKey.split(delimiter),
@@ -270,51 +221,49 @@
 			}
 		}
 
-		// At this point, replacementMap is {findstate: replacementstate}
-		// Go on and replace findstate with replacementstate everywhere in the DFA
 
-		replacement = replacementMap[initialStateKey]
+		/* At this point, replacementMap is {findstate: replacementstate}
+		 * Go on and replace findstate with replacementstate everywhere in the DFA
+		 */
 
-		if (replacement != null) {
-			initialStateKey = replacement
-		}
+		// replace init state
+		var replacement = replacementMap[initialStateKey]
+		initialStateKey = replacement ? replacement : initialStateKey
 
-		// 将状态替换掉
+
+		// replace all states
 		graph2 = Graph.fromJSON(transitionTable)
 		graph2.changeNodes(replacementMap)
-		newTransitionTable = graph2.toJSON()
+		var newTransitionTable = graph2.toJSON()
 
 
-		var tempAcceptStates = []
-		for (var j in acceptDFAStates) {
-			var replacement = replacementMap[acceptDFAStates[j]]
-			if (replacement != null) {
-				if (tempAcceptStates.indexOf(replacement) < 0) {
-					tempAcceptStates.push(replacement)
-				}
-			} else if (tempAcceptStates.indexOf(acceptDFAStates[j]) < 0) {
-				tempAcceptStates.push(acceptDFAStates[j])
-			}
-		}
+		// replace accept states
+		acceptDFAStates = _.map(acceptDFAStates.toArray(),
+			function (acceptDFSState) {
+				var replacement = replacementMap[acceptDFSState]
+				return replacement ? replacement : acceptDFSState
+			})
 
-		// Okay, now we need to tell the user what DFA states belong in each NFA state
-		for (var k in replacementMap) {
-			if (inverseReplacementMap[k] == null) {
-				inverseReplacementMap[k] = replacementMap[k].split(delimiter)
-			}
-			// The else case will never happen because replacementMap[k] cannot exceed 1 in length
-			// Since that would be a collision and we take care of that above
+
+		// DFA state map to NFA states
+		var containedNFAStates = {}
+		for (var dfaStateKey in replacementMap) {
+			containedNFAStates[dfaStateKey] = replacementMap[dfaStateKey].split(delimiter)
 		}
 
 		// Use the inverse map to create the aliasMap
-		for (var k in newTransitionTable) {
-			aliasMap[k] = inverseReplacementMap[k] ? inverseReplacementMap[k] : k.split(delimiter)
+		var aliasMap = {}
+		for (var dfaStateKey in newTransitionTable) {
+			aliasMap[dfaStateKey] = containedNFAStates[dfaStateKey]
+				? containedNFAStates[dfaStateKey]
+				: dfaStateKey.split(delimiter)
 		}
+
 
 		// Return the definition
 		return {
 			initial: initialStateKey,
-			accept: tempAcceptStates,
+			accept: acceptDFAStates,
 			transitions: newTransitionTable,
 			aliasMap: aliasMap
 		}
@@ -324,3 +273,13 @@
 
 	return nfaToDFA
 })
+
+
+//var createDFAState = function (nfaStates) {
+//	return {
+//		_key: nfaStates.join(delimiter),
+//		key: function () {
+//			this._key
+//		}
+//	}
+//}
