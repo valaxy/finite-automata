@@ -166,7 +166,6 @@ define(function (require) {
 
 
 	test('abc', function (assert) {
-		console.log('dddddddddddddddddddddddddddddddddd')
 		var minimalDFA = new Automata(minimize({
 			initial: '0',
 			accept: ['3'],
@@ -177,7 +176,6 @@ define(function (require) {
 				'3': []
 			}
 		}))
-		console.log('dddddddddddddddddddddddddddddddddd')
 		assert.ok(minimalDFA.accepts('abc'))
 		assert.ok(!minimalDFA.accepts('ab'))
 	})

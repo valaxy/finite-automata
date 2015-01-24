@@ -1,5 +1,5 @@
 define(function (require) {
-	var Automata = require('../../src/automata')
+	var Automata = require('src/automata')
 
 	module('Automata')
 

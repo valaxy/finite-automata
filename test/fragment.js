@@ -3,13 +3,17 @@ define(function (require) {
 
 	module('Fragment')
 
+	test('empty string', function (assert) {
+		var frag = new Fragment('')
+		assert.ok(frag.test(''), 'Should accept empty string')
+	})
+
+	
 	test('1234', function (assert) {
-		console.log('--------------')
 		var frag = new Fragment('1234')
-		//assert.ok(frag.test('1234'))
+		assert.ok(frag.test('1234'))
 		assert.ok(!frag.test('123'))
-		//assert.ok(!frag.test('12345'))
-		console.log('----------------')
+		assert.ok(!frag.test('12345'))
 	})
 
 

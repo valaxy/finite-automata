@@ -23,6 +23,8 @@
 		if (str.length > 0) {
 			transitions[i] = [str[i], acceptName]
 			transitions[acceptName] = []
+		} else {
+			transitions['0'] = []
 		}
 
 		return {

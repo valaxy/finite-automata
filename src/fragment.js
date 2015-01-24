@@ -91,8 +91,7 @@
 		// Make sure that accept states are in transitions
 		for (i = 0, ii = def.accept.length; i < ii; ++i) {
 			if (def.transitions[def.accept[i]] == null) {
-				return new Error('Accept state "' + def.accept[i] +
-				'" does not exist in the transition map')
+				return new Error('Accept state "' + def.accept[i] + '" does not exist in the transition map')
 			}
 		}
 
@@ -118,7 +117,6 @@
 	 * @TODO Simulates this fragment on the input
 	 */
 	Fragment.prototype.test = function test(input) {
-		console.log(this.toDfa())
 		return new Automata(this.minimize()).accepts(input)
 	}
 

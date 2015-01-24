@@ -12,12 +12,12 @@ define(function (require) {
 
 	require('./stringToDFA')
 	require('./fragment')
+	require('./fragment/repeat')
+	require('./fragment/fragment')
+
 
 	//require('./eof')
 	//require('./errors')
-	////require('./fragment/fragment')
-
-	//
 	//require('./readme')
 
 })
