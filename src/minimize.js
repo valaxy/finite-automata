@@ -10,6 +10,7 @@
 })(function (require) {
 	var Group = require('./minimize/group')
 	var Set = require('./set')
+	var Graph = require('bower_components/graph/src/directed-transition-graph')
 
 
 	// 将这个几个状态划分到不同的分组里去
@@ -101,6 +102,53 @@
 	}
 
 
+	function build_DFATONFA_AliasMap(originalMap, states, stateToGroupMap) {
+		var aliasMap = {}
+		_.each(states, function (state) {
+			var newState = stateToGroupMap[state]
+
+			if (!(newState in aliasMap)) {
+				aliasMap[newState] = []
+			}
+
+			// nfa - dfa states
+			_.each(originalMap[state], function (c) {
+				// may contains same nfa-state
+				if (aliasMap[newState].indexOf(c) < 0) {
+					aliasMap[newState].push(c)
+				}
+			})
+		})
+		return aliasMap
+	}
+
+
+	function buildLastTransition(originalTransitions, stateToGroupMap) {
+		//
+		// 没有消除死状态啊
+		//
+		var newTransitions = {}
+		for (var state in originalTransitions) {
+			var newState = stateToGroupMap[state]
+			if (newState in newTransitions) {
+				continue
+			}
+
+			var transitions = originalTransitions[state]
+			var stateLinks = []
+
+			for (var i = 0, ii = transitions.length; i < ii; i += 2) {
+				stateLinks.push(transitions[i], stateToGroupMap[transitions[i + 1]])
+			}
+
+			// Since the groups are equivalent, we only need to add the transitions once
+			// adding any more would just be adding duplicate transitions!
+			newTransitions[newState] = stateLinks
+		}
+		return newTransitions
+	}
+
+
 	function minimize(dfa) {
 		var stateToGroupMap = {}
 		var marks = createUnmarkArray(2) // for accept-states/common-states
@@ -145,12 +193,11 @@
 		 */
 
 		// map accept states back to themselves
-		for (var i in dfa.accept) {
+		_.each(dfa.accept, function (acceptState) {
 			// 这里有一个问题就是: 假如有多个接受状态在一个组里
 			// 那么, 它们的groupIndex相同
 			// 虽然有多个接受状态会被处理,
 			// 但所有状态对该groupIndex的指向最终会指向最后一个被处理的接受状态
-			var acceptState = dfa.accept[i]
 			var groupIndex = stateToGroupMap[acceptState]
 
 			for (var k in stateToGroupMap) {
@@ -158,55 +205,35 @@
 					stateToGroupMap[k] = acceptState
 				}
 			}
+		})
+
+		for (var state in stateToGroupMap) {
+			stateToGroupMap[state] += '' // convert to string
 		}
+
 
 		// stateToGroupMap has already been patched to map the accept states back to themselves
 		// This replaces the initial state in case it was replaced
 		dfa.initial = stateToGroupMap[dfa.initial]
 
-		// Dedupe merged accept states
-		var newAcceptSet = new Set
-		for (var i in dfa.accept) {
-			var groupIndex = stateToGroupMap[dfa.accept[i]]
-			newAcceptSet.add(groupIndex)
+
+		// dedupe merged accept states
+		var acceptStates = new Set
+		_.each(dfa.accept, function (acceptState) {
+			acceptStates.add(stateToGroupMap[acceptState])
+		})
+
+		dfa.accept = acceptStates.toArray()
+
+
+		// build the last transition
+		var newTransitions = buildLastTransition(dfa.transitions, stateToGroupMap)
+
+		if (dfa.aliasMap) {
+			dfa.aliasMap = build_DFATONFA_AliasMap(dfa.aliasMap, Object.keys(dfa.transitions), stateToGroupMap)
+		} else { // no aliasMap
+			dfa.aliasMap = null
 		}
-
-		dfa.accept = newAcceptSet.toArray()
-
-
-		var newTransitions = {}
-		var aliasMap = {}
-		for (var state in dfa.transitions) {
-			var groupIndex = stateToGroupMap[state]
-			var stateLinks = []
-			var transitions = dfa.transitions[state]
-
-			for (var i = 0, ii = transitions.length; i < ii; i += 2) {
-				stateLinks.push(transitions[i], stateToGroupMap[transitions[i + 1]])
-			}
-
-			// Since the groups are equivalent, we only need to add the transitions once
-			// adding any more would just be adding duplicate transitions!
-			if (newTransitions[groupIndex] == null) {
-				newTransitions[groupIndex] = stateLinks
-			}
-
-			if (aliasMap[groupIndex] == null) {
-				aliasMap[groupIndex] = dfa.aliasMap[state]
-			} else {
-				for (var i = 0, ii = dfa.aliasMap[state].length; i < ii; ++i) {
-					var c = dfa.aliasMap[state][i]
-
-					// Avoid duplicates in the alias map that can result from
-					// dfa macrostates that share states getting merged together
-					if (aliasMap[groupIndex].indexOf(c) < 0) {
-						aliasMap[groupIndex].push(c)
-					}
-				}
-			}
-		}
-
-		dfa.aliasMap = aliasMap
 		dfa.transitions = newTransitions
 
 		return dfa
@@ -214,6 +241,7 @@
 
 	minimize._initPartition = initPartition
 	minimize._partition = getPartitionByStateMarks
+	minimize._buildDFAToNFAMap = build_DFATONFA_AliasMap
 
 	return minimize
 })
