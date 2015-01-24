@@ -1,5 +1,5 @@
 define(function (require) {
-	var Fragment = require('../../src/fragment')
+	var Fragment = require('src/fragment')
 
 	QUnit.module('Fragment')
 

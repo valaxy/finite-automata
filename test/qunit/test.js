@@ -1,16 +1,20 @@
 define(function (require) {
+	require('./set')
+	require('./deep-equal')
+	require('./stack-generate')
+
 	require('./automata')
 
-	require('./deep-equal')
 	require('./group')
 	require('./minimize')
 
+	require('./nfaToDFA')
+
 	//require('./fragment')
 
-	//require('./stack-generate')
-	//require('./set')
+
 	//
-	//require('./nfaToDFA')
+
 	//require('./string2dfa')
 	//require('./eof')
 	//require('./errors')

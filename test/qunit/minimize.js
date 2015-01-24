@@ -1,7 +1,7 @@
 define(function (require) {
 	var Fragment = require('src/fragment')
 	var Automata = require('src/automata')
-	var minimize = require('src/minimize')
+	var minimize = require('src/minimize/minimize')
 	var Graph = require('bower_components/graph/src/directed-linked-graph')
 
 	module('minimize')

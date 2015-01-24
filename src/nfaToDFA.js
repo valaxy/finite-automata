@@ -40,7 +40,6 @@
 		for (var i in [].concat(initStates)) {
 			stateMark[initStates[i]] = true
 		}
-
 		stackGenerate({
 			initial: initStates,
 			next: function (state) {
@@ -79,119 +78,148 @@
 	}
 
 
-	function nfaToDFA(frag, delimiter) {
+	/**
+	 * Returns the closure of the state.
+	 * This means all states reachable via epsilon-transitions
+	 *
+	 * State is singular but actually an array of states
+	 * because the subset construction creates states
+	 * that are the union of other states
+	 */
+	// 这是个错的啊, 怎么会返回数字呢
+	var closureOf000 = function (state) {
+		var closure = [].concat(state)
 
+		while (true) {
+			var discoveredStates = []
 
-		/**
-		 * Returns the closure of the state.
-		 * This means all states reachable via epsilon-transitions
-		 *
-		 * State is singular but actually an array of states
-		 * because the subset construction creates states
-		 * that are the union of other states
-		 */
-		// 这是个错的啊, 怎么会返回数字呢
-		function closureOf000(state) {
-			var closure = [].concat(state)
-
-			while (true) {
-				var discoveredStates = []
-
-				for (var i in closure) {
-					graph.eachEdge(function (from, to, edge) {
-						if (edge === '\0') { // match epsilon transitions
-							if (closure.indexOf(to) < 0) {
-								discoveredStates.push(to)
-							}
-						}
-					}, closure[i])
-				}
-
-				if (discoveredStates.length === 0) {
-					break
-				} else {
-					closure.push.apply(closure, discoveredStates)
-				}
-
-				discoveredStates = []
-			}
-
-			// This makes it possible to do a deep compare on macrostates quickly
-			return closure.sort()
-		}
-
-
-		function goesTo2(states, chr, graph) {
-			var s = new Set
-
-			for (var i in states) {
-				var state = states[i]
+			for (var i in closure) {
 				graph.eachEdge(function (from, to, edge) {
-					if (edge == chr) {
-						s.add(to)
+					if (edge === '\0') { // match epsilon transitions
+						if (closure.indexOf(to) < 0) {
+							discoveredStates.push(to)
+						}
 					}
-				}, state)
+				}, closure[i])
 			}
 
-			//console.log(closureOf000(s.toArray()))
-			//console.log(closureOf(s.toArray(), graph))
-
-			return closureOf(s.toArray(), graph)
-			//return closureOf000(s.toArray())
-		}
-
-
-		if (delimiter == null) {
-			// Just some obscure char that looks like a pipe
-			delimiter = String.fromCharCode(3193)
-		}
-
-		// If delimiter is in any of the states, fail
-		for (var k in frag.transitions) {
-			if (k.indexOf(delimiter) > -1) {
-				return new Error('Delimiter "' + delimiter + '" collision in state "' + k + '"')
+			if (discoveredStates.length === 0) {
+				break
+			} else {
+				closure.push.apply(closure, discoveredStates)
 			}
+
+			discoveredStates = []
 		}
 
+		// This makes it possible to do a deep compare on macrostates quickly
+		return closure.sort()
+	}
 
-		// Start algorithm by computing the closure of state 0
-		var graph = Graph.fromJSON(frag.transitions)
-		var processStack = [closureOf([frag.initial], graph)]
-		var initialStateKey = processStack[0].join(delimiter)
 
-		// Build the transition table
-		var graph2 = new Graph,
-			mark = {},
-			acceptDFAStates = new Set // DFA State is an array of states of NFA
+	function goesTo2(states, chr, graph) {
+		var s = new Set
+
+		for (var i in states) {
+			var state = states[i]
+			graph.eachEdge(function (from, to, edge) {
+				if (edge == chr) {
+					s.add(to)
+				}
+			}, state)
+		}
+
+		//console.log(closureOf000(s.toArray()))
+		//console.log(closureOf(s.toArray(), graph))
+
+		return closureOf(s.toArray(), graph)
+		//return closureOf000(s.toArray())
+	}
+
+
+	// build the new graph
+	function buildGraph(delimiter, graph, initialDFAState, acceptStates) {
+		// initialDFAState is the only state in this graph at this moment
+		var newGraph = new Graph
+		var initialDFAStateKey = initialDFAState.join(delimiter)
+		newGraph.addNode(initialDFAStateKey)
+
+		// search
+		var processStack = [initialDFAState]
+		var mark = {}
+		var acceptDFAStates = new Set // DFA State is an array of states of NFA
+		mark[initialDFAStateKey] = true
 		while (processStack.length > 0) {
 			var currentDFAState = processStack.pop()
 			var currentDFAStateKey = currentDFAState.join(delimiter)
-			mark[currentDFAStateKey] = true
 
 			// get all characters leaving this state
 			var exitChars = getExitChars(currentDFAState, graph)
 
-			// Run goTo on each character
+			// run goTo on each character
 			exitChars.each(function (exitChar) {
 				var nextDFAState = goesTo2(currentDFAState, exitChar, graph)
 				var nextDFAStateKey = nextDFAState.join(delimiter)
 
-				// a DFA state is an accept state if it contains any accept NFA state
-				for (var i in nextDFAState) {
-					if (frag.accept.indexOf(nextDFAState[i]) >= 0) {
-						acceptDFAStates.add(nextDFAStateKey)
-						break
-					}
-				}
+				newGraph.addEdge(currentDFAStateKey, nextDFAStateKey, exitChar)
 
-				graph2.addEdge(currentDFAStateKey, nextDFAStateKey, exitChar)
+				//// a DFA state is an accept state if it contains any accept NFA state
+				//for (var i in nextDFAState) {
+				//	if (acceptStates.indexOf(nextDFAState[i]) >= 0) {
+				//		acceptDFAStates.add(nextDFAStateKey)
+				//		break
+				//	}
+				//}
 
 				if (!mark[nextDFAStateKey]) {
 					processStack.push(nextDFAState)
+					mark[nextDFAStateKey] = true
 				}
 			})
 		}
 
+		for (var dfaStateKey in mark) {
+			var dfaState = dfaStateKey.split(delimiter)
+			for (var i in dfaState) {
+				if (acceptStates.indexOf(dfaState[i]) >= 0) {
+					acceptDFAStates.add(dfaStateKey)
+					break
+				}
+			}
+		}
+
+
+		return {
+			graph: newGraph,
+			acceptDFAStates: acceptDFAStates
+		}
+	}
+
+	function checkDelimiter(delimiter, states) {
+		if (!delimiter) {
+			return String.fromCharCode(3193) // Just some obscure char that looks like a pipe
+		}
+
+		// if delimiter is in any of the states, fail
+		_.each(states, function (state) {
+			if (state.indexOf(delimiter) > -1) {
+				throw new Error('Delimiter "' + delimiter + '" collision in state "' + state + '"')
+			}
+		})
+
+		return delimiter
+	}
+
+
+	function nfaToDFA(frag, delimiter) {
+		var delimiter = checkDelimiter(delimiter, _.keys(frag.transitions))
+		var graph = Graph.fromJSON(frag.transitions)
+		var initialDFAState = closureOf([frag.initial], graph)
+		var initialStateKey = initialDFAState.join(delimiter)
+		var result = buildGraph(delimiter, graph, initialDFAState, frag.accept)
+
+		var newGraph = result.graph
+		var acceptDFAStates = result.acceptDFAStates
 
 		/*
 		 * At this point we actually have a correct DFA, and the rest of this logic is just cleaning up
@@ -211,11 +239,11 @@
 		// - a string: has been named to a dfa state
 		// - no-exist: can be 1 or set
 		var collision = {}
-		var transitionTable = graph2.toJSON()
+		var transitionTable = newGraph.toJSON()
 
 
 		// find accept states
-		graph2.eachNode(function (dfaStateKey) {
+		newGraph.eachNode(function (dfaStateKey) {
 			var nfaStates = dfaStateKey.split(delimiter)
 
 			// find nfa accept states in this dfa state
@@ -248,8 +276,8 @@
 
 
 		// replace all states
-		graph2 = Graph.fromJSON(transitionTable)
-		graph2.changeNodes(replacementMap)
+		newGraph = Graph.fromJSON(transitionTable)
+		newGraph.changeNodes(replacementMap)
 
 
 		// replace accept states
@@ -266,17 +294,17 @@
 				return nfaStateKeys.split(delimiter)
 			})
 
-
 		// return the definition
 		return {
 			initial: initialStateKey,
 			accept: acceptDFAStates,
-			transitions: graph2.toJSON(),
-			aliasMap: getAliasMap(graph2, containedNFAStates, delimiter)
+			transitions: newGraph.toJSON(),
+			aliasMap: getAliasMap(newGraph, containedNFAStates, delimiter)
 		}
 	}
 
 	nfaToDFA._getExitChars = getExitChars
+	nfaToDFA._buildGraph = buildGraph
 
 	return nfaToDFA
 })

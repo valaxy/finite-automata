@@ -8,8 +8,8 @@
 		define(factory)
 	}
 })(function (require) {
-	var Group = require('./minimize/group')
-	var Set = require('./set')
+	var Group = require('./group')
+	var Set = require('./../set')
 	var Graph = require('bower_components/graph/src/directed-transition-graph')
 
 

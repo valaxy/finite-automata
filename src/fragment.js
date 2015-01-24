@@ -9,9 +9,9 @@
 	}
 })(function (require) {
 	var StateMachine = require('./automata'),
-		_minimize = require('./minimize'),
+		_minimize = require('./minimize/minimize'),
 		string2dfa = require('./string2dfa'),
-		nfa2dfa = require('./nfa2dfa')
+		nfa2dfa = require('./nfaToDFA')
 
 
 	/**
