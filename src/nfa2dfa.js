@@ -11,13 +11,14 @@
 	var stackGenerate = require('./stack-generate')
 	var Set = require('./set')
 	var Graph = require('bower_components/graph/src/directed-linked-graph')
+	var map = require('bower_components/candy.js/src/map')
 	var EPSILON = '\0'
 
 
 	// returns the characters that allow a transition
 	// out of the dfaState
 	// 返回那些使得dfa状态集合中的某一状态转移到另一状态的字符, 不包括空字符
-	function getExitChars(dfaState, graph) {
+	var getExitChars = function (dfaState, graph) {
 		var s = new Set
 		_.each(dfaState, function (state) {
 			graph.eachEdge(function (from, to, edge) {
@@ -34,7 +35,7 @@
 	// this means all states reachable via epsilon-transitions
 	// initStates can be array or just a state
 	// 从初始状态开始只通过'空字符'转换到达的状态集合
-	function closureOf(initStates, graph) {
+	var closureOf = function (initStates, graph) {
 		var stateMark = {}
 		for (var i in [].concat(initStates)) {
 			stateMark[initStates[i]] = true
@@ -63,6 +64,18 @@
 
 		// sort makes it possible to do a deep compare quickly
 		return Object.keys(stateMark).sort()
+	}
+
+
+	// map: dfaStateKey -> [nfaState, ..., nfaState]
+	var getAliasMap = function (graph, containedNFAStates, delimiter) {
+		var aliasMap = {}
+		graph.eachNode(function (dfaStateKey) {
+			aliasMap[dfaStateKey] = containedNFAStates[dfaStateKey]
+				? containedNFAStates[dfaStateKey]
+				: dfaStateKey.split(delimiter)
+		})
+		return aliasMap
 	}
 
 
@@ -123,8 +136,8 @@
 			//console.log(closureOf000(s.toArray()))
 			//console.log(closureOf(s.toArray(), graph))
 
-			//return closureOf(s.toArray(), graph)
-			return closureOf000(s.toArray())
+			return closureOf(s.toArray(), graph)
+			//return closureOf000(s.toArray())
 		}
 
 
@@ -143,18 +156,17 @@
 
 		// Start algorithm by computing the closure of state 0
 		var graph = Graph.fromJSON(frag.transitions)
-		var processStack = [closureOf([frag.initial], graph)],
-			initialStateKey = processStack[0].join(delimiter)
-
+		var processStack = [closureOf([frag.initial], graph)]
+		var initialStateKey = processStack[0].join(delimiter)
 
 		// Build the transition table
 		var graph2 = new Graph,
-			map = {},
+			mark = {},
 			acceptDFAStates = new Set // DFA State is an array of states of NFA
 		while (processStack.length > 0) {
 			var currentDFAState = processStack.pop()
 			var currentDFAStateKey = currentDFAState.join(delimiter)
-			map[currentDFAStateKey] = true
+			mark[currentDFAStateKey] = true
 
 			// get all characters leaving this state
 			var exitChars = getExitChars(currentDFAState, graph)
@@ -174,12 +186,11 @@
 
 				graph2.addEdge(currentDFAStateKey, nextDFAStateKey, exitChar)
 
-				if (!map[nextDFAStateKey]) {
+				if (!mark[nextDFAStateKey]) {
 					processStack.push(nextDFAState)
 				}
 			})
 		}
-		var transitionTable = graph2.toJSON()
 
 
 		/*
@@ -193,33 +204,38 @@
 		 * then we should replace its name with the name of that state
 		 * so that the labels make sense
 		 */
-		var replacementMap = {},
-			collisionMap = {}
-		for (var dfaStateKey in transitionTable) {
-			// Build an array of states in this macrostate that are accept states
-			var dfaState = dfaStateKey.split(delimiter),
-				nfaAcceptStateInDFA = []
+		var replacementMap = {}
+
+		// collision has 3 states:
+		// - 1: can never be named to dfa state
+		// - a string: has been named to a dfa state
+		// - no-exist: can be 1 or set
+		var collision = {}
+		var transitionTable = graph2.toJSON()
 
 
-			for (var i in dfaState) {
-				if (frag.accept.indexOf(dfaState[i]) > -1) {
-					nfaAcceptStateInDFA.push(dfaState[i])
-				}
-			}
+		// find accept states
+		graph2.eachNode(function (dfaStateKey) {
+			var nfaStates = dfaStateKey.split(delimiter)
 
-			// This macrostate only has one accepted state
-			if (nfaAcceptStateInDFA.length === 1) {
-				nfaAcceptStateInDFA = nfaAcceptStateInDFA[0]
+			// find nfa accept states in this dfa state
+			var acceptNFAStates = _.filter(nfaStates, function (nfaState) {
+				return frag.accept.indexOf(nfaState) >= 0
+			})
+
+			// this dfa state only has one accepted nfa state
+			if (acceptNFAStates.length === 1) {
+				var acceptNFAState = acceptNFAStates[0]
 				// Check for a collision
-				// @TODO 这里又问题, 还是有可能加进来
-				if (collisionMap[nfaAcceptStateInDFA] != null) { // 这个接受状态在其他集合里又出现了, 所以去掉冲突
-					delete replacementMap[collisionMap[nfaAcceptStateInDFA]]
+				// 这个接受状态在其他集合里又出现了, 所以去掉冲突
+				if (collision[acceptNFAState]) {
+					delete replacementMap[collision[acceptNFAState]]
 				} else {
-					replacementMap[dfaStateKey] = nfaAcceptStateInDFA  // k替换到原始的名字
-					collisionMap[nfaAcceptStateInDFA] = dfaStateKey
+					replacementMap[dfaStateKey] = acceptNFAState  // replace to original name
+					collision[acceptNFAState] = dfaStateKey
 				}
 			}
-		}
+		})
 
 
 		/* At this point, replacementMap is {findstate: replacementstate}
@@ -234,7 +250,6 @@
 		// replace all states
 		graph2 = Graph.fromJSON(transitionTable)
 		graph2.changeNodes(replacementMap)
-		var newTransitionTable = graph2.toJSON()
 
 
 		// replace accept states
@@ -246,26 +261,18 @@
 
 
 		// DFA state map to NFA states
-		var containedNFAStates = {}
-		for (var dfaStateKey in replacementMap) {
-			containedNFAStates[dfaStateKey] = replacementMap[dfaStateKey].split(delimiter)
-		}
-
-		// Use the inverse map to create the aliasMap
-		var aliasMap = {}
-		for (var dfaStateKey in newTransitionTable) {
-			aliasMap[dfaStateKey] = containedNFAStates[dfaStateKey]
-				? containedNFAStates[dfaStateKey]
-				: dfaStateKey.split(delimiter)
-		}
+		var containedNFAStates = map.changeValue(replacementMap,
+			function (dfaStateKey, nfaStateKeys) {
+				return nfaStateKeys.split(delimiter)
+			})
 
 
-		// Return the definition
+		// return the definition
 		return {
 			initial: initialStateKey,
 			accept: acceptDFAStates,
-			transitions: newTransitionTable,
-			aliasMap: aliasMap
+			transitions: graph2.toJSON(),
+			aliasMap: getAliasMap(graph2, containedNFAStates, delimiter)
 		}
 	}
 
@@ -273,13 +280,3 @@
 
 	return nfaToDFA
 })
-
-
-//var createDFAState = function (nfaStates) {
-//	return {
-//		_key: nfaStates.join(delimiter),
-//		key: function () {
-//			this._key
-//		}
-//	}
-//}
