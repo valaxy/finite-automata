@@ -2,6 +2,7 @@ define(function (require) {
 	var Fragment = require('src/fragment'),
 		nfaToDFA = require('src/nfaToDFA'),
 		Automata = require('src/automata'),
+		DFABundle = require('src/nfa-dfa/dfa-state-bundle'),
 		TransitionGraph = require('bower_components/graph/src/directed-transition-graph')
 
 
@@ -25,18 +26,33 @@ define(function (require) {
 	})
 
 	test('_buildGraph()', function (assert) {
+		var initialDFABundle = new DFABundle(['0'], ',')
 		var result = nfaToDFA._buildGraph(',', TransitionGraph.fromJSON({
 			'0': []
-		}), ['0'], ['0'])
+		}), initialDFABundle, ['0'])
 		var graph = result.graph
 		var accepteDFAStates = result.acceptDFAStates
 
 		assert.deepEqual(graph.toJSON(), {
 			'0': []
 		})
-		assert.deepEqual(accepteDFAStates.toArray(), ['0'])
+		assert.deepEqual(_.map(accepteDFAStates, function (dfaState) {
+			return dfaState.key()
+		}), ['0'])
 	})
 
+
+	test('_getReplacementMap()', function (assert) {
+		var b1 = new DFABundle(['a', '1', '2'], ',') // can be replaced
+		var b2 = new DFABundle(['c', '1'], ',') // collision, can not be replaced
+		var b3 = new DFABundle(['c', '2'], ',') // collision, can not be replaced
+		var b4 = new DFABundle(['e', 'f'], ',') // two accept states, can not be replaced
+		var b5 = new DFABundle(['4', '5'], ',') // no accept states, can not be replaced
+		var map = nfaToDFA._getReplacementMap(['a', 'c', 'e', 'f'], [b1, b2, b3, b4, b5])
+		assert.deepEqual(map, {
+			'a,1,2': 'a'
+		})
+	})
 
 	test('empty string', function (assert) {
 		var automata = new Automata(nfaToDFA({

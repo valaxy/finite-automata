@@ -10,6 +10,7 @@
 })(function (require) {
 	var stackGenerate = require('./stack-generate')
 	var Set = require('./set')
+	var DFAStateBundle = require('./nfa-dfa/dfa-state-bundle')
 	var Graph = require('bower_components/graph/src/directed-linked-graph')
 	var map = require('bower_components/candy.js/src/map')
 	var EPSILON = '\0'
@@ -78,46 +79,7 @@
 	}
 
 
-	/**
-	 * Returns the closure of the state.
-	 * This means all states reachable via epsilon-transitions
-	 *
-	 * State is singular but actually an array of states
-	 * because the subset construction creates states
-	 * that are the union of other states
-	 */
-	// 这是个错的啊, 怎么会返回数字呢
-	var closureOf000 = function (state) {
-		var closure = [].concat(state)
-
-		while (true) {
-			var discoveredStates = []
-
-			for (var i in closure) {
-				graph.eachEdge(function (from, to, edge) {
-					if (edge === '\0') { // match epsilon transitions
-						if (closure.indexOf(to) < 0) {
-							discoveredStates.push(to)
-						}
-					}
-				}, closure[i])
-			}
-
-			if (discoveredStates.length === 0) {
-				break
-			} else {
-				closure.push.apply(closure, discoveredStates)
-			}
-
-			discoveredStates = []
-		}
-
-		// This makes it possible to do a deep compare on macrostates quickly
-		return closure.sort()
-	}
-
-
-	function goesTo2(states, chr, graph) {
+	var goesTo = function (states, chr, graph) {
 		var s = new Set
 
 		for (var i in states) {
@@ -129,26 +91,22 @@
 			}, state)
 		}
 
-		//console.log(closureOf000(s.toArray()))
-		//console.log(closureOf(s.toArray(), graph))
-
 		return closureOf(s.toArray(), graph)
-		//return closureOf000(s.toArray())
 	}
 
 
 	// build the new graph
-	function buildGraph(delimiter, graph, initialDFAState, acceptStates) {
+	var buildDFAGraph = function (delimiter, graph, initialDFABundle, acceptStates) {
 		// initialDFAState is the only state in this graph at this moment
 		var newGraph = new Graph
-		var initialDFAStateKey = initialDFAState.join(delimiter)
-		newGraph.addNode(initialDFAStateKey)
+		newGraph.addNode(initialDFABundle.key())
+
 
 		// search
-		var processStack = [initialDFAState]
+		var processStack = [initialDFABundle.nfaStates()]
 		var mark = {}
-		var acceptDFAStates = new Set // DFA State is an array of states of NFA
-		mark[initialDFAStateKey] = true
+
+		mark[initialDFABundle.key()] = initialDFABundle
 		while (processStack.length > 0) {
 			var currentDFAState = processStack.pop()
 			var currentDFAStateKey = currentDFAState.join(delimiter)
@@ -158,35 +116,32 @@
 
 			// run goTo on each character
 			exitChars.each(function (exitChar) {
-				var nextDFAState = goesTo2(currentDFAState, exitChar, graph)
+				var nextDFAState = goesTo(currentDFAState, exitChar, graph)
 				var nextDFAStateKey = nextDFAState.join(delimiter)
 
 				newGraph.addEdge(currentDFAStateKey, nextDFAStateKey, exitChar)
 
-				//// a DFA state is an accept state if it contains any accept NFA state
-				//for (var i in nextDFAState) {
-				//	if (acceptStates.indexOf(nextDFAState[i]) >= 0) {
-				//		acceptDFAStates.add(nextDFAStateKey)
-				//		break
-				//	}
-				//}
-
 				if (!mark[nextDFAStateKey]) {
 					processStack.push(nextDFAState)
-					mark[nextDFAStateKey] = true
+					mark[nextDFAStateKey] = new DFAStateBundle(nextDFAState, delimiter)
 				}
 			})
 		}
 
-		for (var dfaStateKey in mark) {
-			var dfaState = dfaStateKey.split(delimiter)
-			for (var i in dfaState) {
-				if (acceptStates.indexOf(dfaState[i]) >= 0) {
-					acceptDFAStates.add(dfaStateKey)
+		// at this point, all the NFA states have been searched and
+		// all the NFA bundles can be generated
+
+		// get all the accept DFA bundles
+		var acceptDFAStates = []
+		_.each(mark, function (dfaBundle) {
+			var nfaStates = dfaBundle.nfaStates()
+			for (var i in nfaStates) {
+				if (_.contains(acceptStates, nfaStates[i])) {
+					acceptDFAStates.push(dfaBundle)
 					break
 				}
 			}
-		}
+		})
 
 
 		return {
@@ -195,7 +150,7 @@
 		}
 	}
 
-	function checkDelimiter(delimiter, states) {
+	var checkDelimiter = function (delimiter, states) {
 		if (!delimiter) {
 			return String.fromCharCode(3193) // Just some obscure char that looks like a pipe
 		}
@@ -211,80 +166,74 @@
 	}
 
 
-	function nfaToDFA(frag, delimiter) {
-		var delimiter = checkDelimiter(delimiter, _.keys(frag.transitions))
-		var graph = Graph.fromJSON(frag.transitions)
-		var initialDFAState = closureOf([frag.initial], graph)
-		var initialStateKey = initialDFAState.join(delimiter)
-		var result = buildGraph(delimiter, graph, initialDFAState, frag.accept)
-
-		var newGraph = result.graph
-		var acceptDFAStates = result.acceptDFAStates
-
-		/*
-		 * At this point we actually have a correct DFA, and the rest of this logic is just cleaning up
-		 * the compound states into something more human readable
-		 */
-
-
-		/*
-		 * If a DFA state contains only one originally accepted state
-		 * then we should replace its name with the name of that state
-		 * so that the labels make sense
-		 */
+	// If a DFA state contains only one originally accepted state
+	// then we should replace its name with the name of that state
+	// so that the labels make sense
+	function getReplacementMap(allAcceptNFAStates, dfaBundles) {
 		var replacementMap = {}
-
-		// collision has 3 states:
-		// - 1: can never be named to dfa state
-		// - a string: has been named to a dfa state
-		// - no-exist: can be 1 or set
 		var collision = {}
-		var transitionTable = newGraph.toJSON()
 
-
-		// find accept states
-		newGraph.eachNode(function (dfaStateKey) {
-			var nfaStates = dfaStateKey.split(delimiter)
-
-			// find nfa accept states in this dfa state
-			var acceptNFAStates = _.filter(nfaStates, function (nfaState) {
-				return frag.accept.indexOf(nfaState) >= 0
+		// find accept DFA bundle
+		_.each(dfaBundles, function (dfaBundle) {
+			// find NFA accept states in this DFA bundle
+			var acceptNFAStates = _.filter(dfaBundle.nfaStates(), function (nfaState) {
+				return _.contains(allAcceptNFAStates, nfaState)
 			})
 
-			// this dfa state only has one accepted nfa state
 			if (acceptNFAStates.length === 1) {
 				var acceptNFAState = acceptNFAStates[0]
-				// Check for a collision
-				// 这个接受状态在其他集合里又出现了, 所以去掉冲突
+				// check for a collision
+				// acceptNFAState可能在多个dfaState里出现, 一旦acceptNFAState出现在多个dfaState里
+				// 那么任何一个dfaState都不能还原为原来的名称
 				if (collision[acceptNFAState]) {
 					delete replacementMap[collision[acceptNFAState]]
 				} else {
-					replacementMap[dfaStateKey] = acceptNFAState  // replace to original name
-					collision[acceptNFAState] = dfaStateKey
+					replacementMap[dfaBundle.key()] = acceptNFAState  // replace to original name
+					collision[acceptNFAState] = dfaBundle.key()
 				}
 			}
 		})
 
+		return replacementMap
+	}
 
-		/* At this point, replacementMap is {findstate: replacementstate}
-		 * Go on and replace findstate with replacementstate everywhere in the DFA
-		 */
 
-		// replace init state
-		var replacement = replacementMap[initialStateKey]
-		initialStateKey = replacement ? replacement : initialStateKey
+	function nfaToDFA(frag, delimiter) {
+		// init initial condition
+		var delimiter = checkDelimiter(delimiter, _.keys(frag.transitions))
+		var graph = Graph.fromJSON(frag.transitions)
+		var initialDFAState = closureOf([frag.initial], graph)
+		var initialDFABundle = new DFAStateBundle(initialDFAState, delimiter)
+
+		// build the graph about DFA
+		var result = buildDFAGraph(delimiter, graph, initialDFABundle, frag.accept)
+		var dfaGraph = result.graph
+		var acceptDFAStates = result.acceptDFAStates
+
+
+		// At this point we actually have a correct DFA, and the rest of this logic is just cleaning up
+		// the compound states into something more human readable
+		var dfaStates = _.map(dfaGraph.nodes(), function (dfaStateKey) {
+			return new DFAStateBundle(dfaStateKey.split(delimiter), delimiter)
+		})
+		var replacementMap = getReplacementMap(frag.accept, dfaStates)
+
+
+		// Go on and replace states in the DFA
+		// replace initial state
+		var replacement = replacementMap[initialDFABundle.key()]
+		var initialStateKey = replacement ? replacement : initialDFABundle.key()
 
 
 		// replace all states
-		newGraph = Graph.fromJSON(transitionTable)
-		newGraph.changeNodes(replacementMap)
+		dfaGraph.changeNodes(replacementMap)
 
 
 		// replace accept states
-		acceptDFAStates = _.map(acceptDFAStates.toArray(),
+		acceptDFAStates = _.map(acceptDFAStates,
 			function (acceptDFSState) {
-				var replacement = replacementMap[acceptDFSState]
-				return replacement ? replacement : acceptDFSState
+				var replacement = replacementMap[acceptDFSState.key()]
+				return replacement ? replacement : acceptDFSState.key()
 			})
 
 
@@ -294,17 +243,20 @@
 				return nfaStateKeys.split(delimiter)
 			})
 
+
 		// return the definition
 		return {
 			initial: initialStateKey,
 			accept: acceptDFAStates,
-			transitions: newGraph.toJSON(),
-			aliasMap: getAliasMap(newGraph, containedNFAStates, delimiter)
+			transitions: dfaGraph.toJSON(),
+			aliasMap: getAliasMap(dfaGraph, containedNFAStates, delimiter)
 		}
 	}
 
+
 	nfaToDFA._getExitChars = getExitChars
-	nfaToDFA._buildGraph = buildGraph
+	nfaToDFA._buildGraph = buildDFAGraph
+	nfaToDFA._getReplacementMap = getReplacementMap
 
 	return nfaToDFA
 })
