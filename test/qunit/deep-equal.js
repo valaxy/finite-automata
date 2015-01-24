@@ -1,5 +1,5 @@
 define(function (require) {
-	var deepEqual = require('../../src/deep-equal')
+	var deepEqual = require('src/minimize/deep-equal')
 
 	module('deepEqual')
 

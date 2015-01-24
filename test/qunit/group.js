@@ -1,28 +1,30 @@
 define(function (require) {
-	var Partition = require('../../src/partition')
+	var Group = require('src/minimize/group')
+
+	module('Group')
 
 	test('isSampeGroup()', function (assert) {
-		var part1 = new Partition({
+		var part1 = new Group({
 			'a': 0,
 			'b': 1,
 			'c': 5
 		})
 
-		assert.ok(part1.isSameGroup({
+		assert.ok(part1.canJoin({
 			'a': 0,
 			'b': 1,
 			'c': 5
 		}))
-		assert.ok(part1.isSameGroup({
+		assert.ok(part1.canJoin({
 			'b': 1,
 			'c': 5,
 			'a': 0
 		}))
-		assert.ok(!part1.isSameGroup({
+		assert.ok(!part1.canJoin({
 			'a': 0,
 			'b': 1
 		}))
-		assert.ok(!part1.isSameGroup({
+		assert.ok(!part1.canJoin({
 			'a': 0,
 			'b': 1,
 			'c': 5,
@@ -32,7 +34,7 @@ define(function (require) {
 
 
 	test('states()/addState()', function (assert) {
-		var part1 = new Partition({
+		var part1 = new Group({
 			'a': 0
 		})
 
@@ -47,7 +49,7 @@ define(function (require) {
 
 
 	test('toArray()', function (assert) {
-		var part = new Partition({
+		var part = new Group({
 			'a': 0,
 			'b': 1
 		}).addState('a', 'b', 'c')

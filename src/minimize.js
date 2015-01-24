@@ -8,55 +8,56 @@
 		define(factory)
 	}
 })(function (require) {
-	var Group = require('./partition')
+	var Group = require('./minimize/group')
 	var Set = require('./set')
 
 
-	// table是邻接矩阵, 根据table, 去掉了重复的状态, 返回不重复的状态
-	// 有几个元素就有几个决然不相同的状态
-	// 划分组
-	function partition(table) {
-		// 随便找到一个状态
-		var anyState = Object.keys(table)[0]
+	// 将这个几个状态划分到不同的分组里去
+	// stateMarks: 一个map, 表示状态对应的mark
+	function getPartitionByStateMarks(stateMarks) {
+		var subGroups = [] // 一个group表示一个分组
 
-		// 是一个数组, 元素表示状态的集合, 这个集合里的状态是可以合并的状态
-		//  元素: 这个状态的转换表, 状态1, 状态2, ...
-		var anyGroup = new Group(table[anyState]).addState(anyState)
-		var subGroups = [anyGroup]
-		delete table[anyState]
-
-		for (var state in table) {
-			var row = table[state]
+		_.each(stateMarks, function (stateMark, state) {
 			var found = false
 
-			// 找到相同的状态, 指出边情况一致
+			// 找到这个状态所属的组
 			for (var j in subGroups) {
-				var group = subGroups[j]
-				if (group.isSameGroup(row)) {
-					group.addState(state)
+				var subGroup = subGroups[j]
+				if (subGroup.canJoin(stateMark)) {
 					found = true
 					break
 				}
 			}
 
-			if (!found) {
-				subGroups.push(new Group(row).addState(state))
+			if (!found) { // 没有找到就另开一个组
+				subGroups.push(new Group(stateMark).addState(state))
+			} else {
+				subGroup.addState(state)
 			}
-		}
+		})
 
 		return subGroups
 	}
 
+	// states: 状态数组
+	// 返回这些状态的划分, 一个包括Group的数组
+	function getParitionByStates(group, dfaTransitions, stateToGroupMap) {
+		var stateMarks = {}
 
-	// return the i which marks[i] is false or -1
-	function getUnmarkIndex(marks) {
-		for (var i in marks) {
-			if (!marks[i]) {
-				return i
+		// 邻接表转化为邻接矩阵
+		// table: 一维是状态, 二维是字母, 值是指向状态所属group-index
+		// table contains all states of one group
+		_.each(group.states(), function (state) {
+			var transitions = dfaTransitions[state]
+			stateMarks[state] = {}
+
+			for (var j = 0, jj = transitions.length; j < jj; j += 2) {
+				stateMarks[state][transitions[j]] = stateToGroupMap[transitions[j + 1]]
 			}
-		}
+		})
 
-		return -1
+		var partition = getPartitionByStateMarks(stateMarks)
+		return partition // 返回这些状态
 	}
 
 
@@ -69,110 +70,69 @@
 	}
 
 
-	function copy(ary) {
-		var a = new Array(ary.length)
-		for (var i = 0; i < ary.length; i++) {
-			a[i] = ary[i]
+	function buildStateToGroupMap(stateToGroupMap, groups) {
+		for (var i = 0, ii = groups.length; i < ii; ++i) { // @TODO why I can't use var i in groups
+			var group = groups[i].states()
+
+			for (var j = 0, jj = group.length; j < jj; j++) {
+				stateToGroupMap[group[j]] = i
+			}
 		}
-		return a
 	}
 
 
-	function minimize(dfa) {
+	// at the begin, accept states put in a group, others put other group
+	function initPartition(stateToGroupMap, allStates, acceptStates) {
+		// acceptGroup is about accept states
+		// commonGroup is about no-accept states
+		var acceptGroup = new Group().addStates(acceptStates)
+		var otherGroup = new Group()
 
-		function buildStateToGroupMap() {
-			stateToGroupMap = {}
-
-			for (var i = 0, ii = groups.length; i < ii; ++i) { // @TODO why I can't use var i in groups
-				var group = groups[i]
-
-				for (var j = 0, jj = group.length; j < jj; j++) {
-					stateToGroupMap[group[j]] = i
-				}
-			}
-		}
-
-
-		// 判断 states 里的状态是否一致
-		// 一致则返回true, 否则返回这个划分
-		function isConsistent(states) {
-			var table = {}
-
-			// 如果这个分划只有一个状态, 那么这个分划一定是最终分划
-			if (states.length === 1) {
-				return true
-			}
-
-			// 邻接表转化为邻接矩阵
-			// table: 一维是状态, 二维是字母, 值是指向状态所属group-index
-			// table contains all states of one group
-			for (var i in states) {
-				var state = states[i]
-				var transitions = dfa.transitions[state]
-				table[state] = {}
-
-				for (var j = 0, jj = transitions.length; j < jj; j += 2) {
-					table[state][transitions[j]] = stateToGroupMap[transitions[j + 1]]
-				}
-			}
-
-			// 获得了该分组的划分
-			var partitions = partition(table)
-
-			if (partitions.length === 1) { // 只有一个分组, 说明所有状态都可以放到这个组里
-				return true
-			} else {
-				return partitions // 返回这些状态
-			}
-		}
-
-
-		// each element of groups is a array
-		// the array contains states that are same which can be zipped into one state
-		var groups = []
-		var marks = createUnmarkArray(2) // for accept-states/common-states
-		var stateToGroupMap = {}
-
-
-		// groups is a map array, map new state to old state
-		// group[0] is about accept states
-		// group[1] is about no-accept states
-		groups[0] = copy(dfa.accept) // Accepting States, 这里只
-		groups[1] = []               // Rejecting states
-
-
-		// put all the states to group[0] or group[1]
-		for (var state in dfa.transitions) {
-			if (groups[0].indexOf(state) < 0) {
-				groups[1].push(state)
+		// put all the states to acceptGroup or otherGroup
+		_.each(allStates, function (state) {
+			if (!acceptGroup.contains(state)) {
+				otherGroup.addState(state)
 				stateToGroupMap[state] = 1
 			} else {
 				stateToGroupMap[state] = 0
 			}
-		}
+		})
+		return [acceptGroup, otherGroup]
+	}
 
 
+	function minimize(dfa) {
+		var stateToGroupMap = {}
+		var marks = createUnmarkArray(2) // for accept-states/common-states
+
+		// each element of groups is a Group
+		// the Group contains states that are same which can be zipped into one state
+		var groups = initPartition(stateToGroupMap, Object.keys(dfa.transitions), dfa.accept)
+
+
+		// 开始划分
 		while (true) {
-			var groupIndex = getUnmarkIndex(marks)
-
+			var groupIndex = marks.indexOf(false) // 找到第一个没有被标识的分组
 			if (groupIndex < 0) {
 				break
 			}
 
-			var partitions = isConsistent(groups[groupIndex])
+			// 针对groups[groupIndex]的一个内部分划
+			var partition = getParitionByStates(groups[groupIndex], dfa.transitions, stateToGroupMap)
 
-			if (partitions === true) {
+			if (partition.length === 1) {
 				marks[groupIndex] = true
 			} else {
 				groups.splice(groupIndex, 1) // delete the group
 
-				for (var i in partitions) {
-					groups.push(partitions[i].states())
-				}
+				_.each(partition, function (group) {
+					groups.push(group)
+				})
 
-				buildStateToGroupMap()
+				stateToGroupMap = {}
+				buildStateToGroupMap(stateToGroupMap, groups)
 
-				// Unmark everything again
+				// unmark everything again
 				marks = createUnmarkArray(groups.length)
 			}
 		}
@@ -184,7 +144,7 @@
 		 * for the accept states, which we use the same name for convenience
 		 */
 
-		// Map accept states back to themselves
+		// map accept states back to themselves
 		for (var i in dfa.accept) {
 			// 这里有一个问题就是: 假如有多个接受状态在一个组里
 			// 那么, 它们的groupIndex相同
@@ -251,6 +211,9 @@
 
 		return dfa
 	}
+
+	minimize._initPartition = initPartition
+	minimize._partition = getPartitionByStateMarks
 
 	return minimize
 })
