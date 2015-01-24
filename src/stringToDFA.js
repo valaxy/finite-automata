@@ -11,7 +11,7 @@
 
 	// str: the string to match
 	// acceptName: optional
-	function string2dfa(str, acceptName) {
+	function stringToDFA(str, acceptName) {
 		var acceptName = acceptName ? acceptName : str.length
 		var transitions = {}
 
@@ -29,5 +29,5 @@
 	}
 
 
-	return string2dfa
+	return stringToDFA
 })

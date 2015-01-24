@@ -10,12 +10,11 @@ define(function (require) {
 
 	require('./nfaToDFA')
 
+	require('./stringToDFA')
+
+
 	//require('./fragment')
 
-
-	//
-
-	//require('./string2dfa')
 	//require('./eof')
 	//require('./errors')
 	////require('./fragment/fragment')
