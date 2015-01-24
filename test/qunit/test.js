@@ -11,9 +11,7 @@ define(function (require) {
 	require('./nfaToDFA')
 
 	require('./stringToDFA')
-
-
-	//require('./fragment')
+	require('./fragment')
 
 	//require('./eof')
 	//require('./errors')

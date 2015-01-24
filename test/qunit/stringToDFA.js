@@ -10,6 +10,7 @@ define(function (require) {
 		assert.ok(!automata.accepts('x'))
 	})
 
+
 	test('abcd', function (assert) {
 		var automata = new Automata(stringToDFA('abcd'))
 		assert.ok(automata.accepts('abcd'))

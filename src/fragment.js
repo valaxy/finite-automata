@@ -8,10 +8,10 @@
 		define(factory)
 	}
 })(function (require) {
-	var StateMachine = require('./automata'),
-		_minimize = require('./minimize/minimize'),
-		string2dfa = require('./stringToDFA'),
-		nfa2dfa = require('./nfaToDFA')
+	var Automata = require('./automata'),
+		minimize = require('./minimize/minimize'),
+		stringToDFA = require('./stringToDFA'),
+		nfaToDFA = require('./nfaToDFA')
 
 
 	/**
@@ -20,25 +20,12 @@
 	 * doesn't require such stringent checking.
 	 */
 	var Fragment = function Fragment(def, acceptName) {
-
 		// OK to be a string literal, we'll construct a fragment from that
 		if (typeof def == 'string') {
-			def = string2dfa(def, acceptName)
-		}
-		// This is a shorthanded special case: the EOF character
-		else if (def === -1) {
-			def = {
-				initial: 0
-				, accept: [1]
-				, transitions: {
-					0: [-1, 1]
-					, 1: []
-				}
-			}
+			def = stringToDFA(def, acceptName)
 		}
 
 		var err = this.validate(def)
-
 		if (err !== true) {
 			throw err
 		}
@@ -75,15 +62,14 @@
 
 
 	Fragment.prototype.toDfa = function (delimiter) {
-		return nfa2dfa(this._copyConfig(), delimiter)
+		return nfaToDFA(this._copyConfig(), delimiter)
 	}
 
 	Fragment.prototype.minimize = function (delimiter) {
-		return _minimize(this.toDfa(delimiter))
+		return minimize(this.toDfa(delimiter))
 	}
 
 	Fragment.prototype.validate = function (def) {
-
 		var i, ii, k
 
 		if (!def) {
@@ -132,7 +118,8 @@
 	 * @TODO Simulates this fragment on the input
 	 */
 	Fragment.prototype.test = function test(input) {
-		return new StateMachine(this.minimize()).accepts(input)
+		console.log(this.toDfa())
+		return new Automata(this.minimize()).accepts(input)
 	}
 
 	/**

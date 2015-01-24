@@ -12,17 +12,21 @@
 	// str: the string to match
 	// acceptName: optional
 	function stringToDFA(str, acceptName) {
-		var acceptName = acceptName ? acceptName : str.length
+		var acceptName = acceptName != undefined ? acceptName : (str.length + '')
 		var transitions = {}
 
 		for (var i = 0, ii = str.length - 1; i < ii; ++i) {
-			transitions[i] = [str.charAt(i), i + 1]
+			var from = i + ''
+			var to = (i + 1) + ''
+			transitions[from] = [str[i], to]
 		}
-		transitions[i] = [str.charAt(i), acceptName]
-		transitions[acceptName] = []
+		if (str.length > 0) {
+			transitions[i] = [str[i], acceptName]
+			transitions[acceptName] = []
+		}
 
 		return {
-			initial: 0,
+			initial: '0',
 			accept: [acceptName],
 			transitions: transitions
 		}

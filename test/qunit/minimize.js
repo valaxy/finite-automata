@@ -165,6 +165,23 @@ define(function (require) {
 	})
 
 
+	test('abc', function (assert) {
+		console.log('dddddddddddddddddddddddddddddddddd')
+		var minimalDFA = new Automata(minimize({
+			initial: '0',
+			accept: ['3'],
+			transitions: {
+				'0': ['a', '1'],
+				'1': ['b', '2'],
+				'2': ['c', '3'],
+				'3': []
+			}
+		}))
+		console.log('dddddddddddddddddddddddddddddddddd')
+		assert.ok(minimalDFA.accepts('abc'))
+		assert.ok(!minimalDFA.accepts('ab'))
+	})
+
 	// @TODO the case is too complex
 	//test('case3', function (assert) {
 	//	var nfa = new Fragment({

@@ -13,6 +13,15 @@
 	var Graph = require('bower_components/graph/src/directed-transition-graph')
 
 
+	// find a state based `state` with no collision
+	function findNoCollisionState(states, state) {
+		while (_.contains(states, state)) {
+			state += '`'
+		}
+		return state
+	}
+
+
 	// 将这个几个状态划分到不同的分组里去
 	// stateMarks: 一个map, 表示状态对应的mark
 	function getPartitionByStateMarks(stateMarks) {
@@ -191,6 +200,25 @@
 		 * now we just replace each state with it's group index, except
 		 * for the accept states, which we use the same name for convenience
 		 */
+
+		for (var state in stateToGroupMap) {
+			stateToGroupMap[state] += ''
+		}
+
+
+		// replace collision states
+		var newStates = _.union(_.values(stateToGroupMap))
+		_.each(newStates, function (newState) {
+			if (_.contains(dfa.accept, newState)) {
+				var replaceState = findNoCollisionState(dfa.accept, newState)
+				_.each(stateToGroupMap, function (group, state) {
+					if (group == newState) {
+						stateToGroupMap[state] = replaceState
+					}
+				})
+			}
+		})
+
 
 		// map accept states back to themselves
 		_.each(dfa.accept, function (acceptState) {

@@ -38,8 +38,7 @@ define(function (require) {
 	})
 
 
-	test('case0: empty string', function (assert) {
-		console.log('----------------------')
+	test('empty string', function (assert) {
 		var automata = new Automata(nfaToDFA({
 			initial: '0',
 			accept: ['0'],
@@ -51,7 +50,7 @@ define(function (require) {
 		assert.ok(automata.accepts(''))
 	})
 
-	test('case1: initial state can reach accept state with epsilon', function (assert) {
+	test('initial state can reach accept state with only epsilon', function (assert) {
 		var automata = new Automata(nfaToDFA({
 			initial: '0',
 			accept: ['1', '2'],
@@ -67,7 +66,23 @@ define(function (require) {
 	})
 
 
-	test('case2', function (assert) {
+	test('abcd', function (assert) {
+		var automata = new Automata(nfaToDFA({
+			initial: '0',
+			accept: ['4'],
+			transitions: {
+				'0': ['a', '1'],
+				'1': ['b', '2'],
+				'2': ['c', '3'],
+				'3': ['d', '4']
+			}
+		}))
+
+		assert.ok(automata.accepts('abcd'))
+	})
+
+
+	test('a complex case', function (assert) {
 		// Example taken from:
 		// http://binarysculpting.com/2012/02/15/converting-dfa-to-nfa-by-subset-construction-regular-expressions-part-2
 		var nfa = new Fragment({
@@ -105,8 +120,8 @@ define(function (require) {
 	})
 
 
-	// may wrong because of case2
-	//test('case3', function (assert) {
+	//
+	//test('may wrong because of case2', function (assert) {
 	//	var nfa = new Fragment({
 	//		initial: '0',
 	//		accept: ['T\'\'->T\' $', 'T\'->T', 'T->R', 'T->a T c', 'R->', 'R->b R'],

@@ -3,11 +3,13 @@ define(function (require) {
 
 	module('Fragment')
 
-	test('case0', function (assert) {
+	test('1234', function (assert) {
+		console.log('--------------')
 		var frag = new Fragment('1234')
-		assert.equal(frag.test('1234'), true)
-		assert.equal(frag.test('123'), false)
-		assert.equal(frag.test('12345'), false)
+		//assert.ok(frag.test('1234'))
+		assert.ok(!frag.test('123'))
+		//assert.ok(!frag.test('12345'))
+		console.log('----------------')
 	})
 
 

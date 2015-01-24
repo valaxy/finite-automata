@@ -60,7 +60,6 @@
 				return false
 			}
 		}
-
 		return this.isAcceptState()
 	}
 
