@@ -3,7 +3,7 @@ define(function (require) {
 		nfaToDFA = require('src/nfaToDFA'),
 		Automata = require('src/automata'),
 		DFABundle = require('src/nfa-dfa/dfa-state-bundle'),
-		TransitionGraph = require('bower_components/graph/src/directed-transition-graph')
+		TransitionGraph = require('bower_components/algorithm-data-structure/src/graph/directed-transition-graph')
 
 
 	var EPSILON = '\0'

@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "candy.js": "valaxy/candy.js",
-    "graph": "valaxy/graph",
-    "underscore": "~1.7.0"
+    "underscore": "~1.7.0",
+    "algorithm-data-structure": "valaxy/algorithm-data-structure"
   }
 }

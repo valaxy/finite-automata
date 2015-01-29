@@ -9,8 +9,8 @@
 	}
 })(function (require) {
 	var Group = require('./group')
-	var Set = require('./../set')
-	var Graph = require('bower_components/graph/src/directed-transition-graph')
+	var Set = require('bower_components/algorithm-data-structure/src/set/set')
+	var Graph = require('bower_components/algorithm-data-structure/src/graph/directed-transition-graph')
 
 
 	// find a state based `state` with no collision

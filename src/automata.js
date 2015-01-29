@@ -8,7 +8,7 @@
 		define(factory)
 	}
 })(function (require) {
-	var TransitionGraph = require('bower_components/graph/src/directed-transition-graph')
+	var TransitionGraph = require('bower_components/algorithm-data-structure/src/graph/directed-transition-graph')
 
 	/**
 	 * initial: a string value

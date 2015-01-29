@@ -1,5 +1,4 @@
 define(function (require) {
-	require('./set')
 	require('./deep-equal')
 	require('./stack-generate')
 

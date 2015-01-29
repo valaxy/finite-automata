@@ -9,9 +9,9 @@
 	}
 })(function (require) {
 	var stackGenerate = require('./stack-generate')
-	var Set = require('./set')
+	var Set = require('bower_components/algorithm-data-structure/src/set/set')
 	var DFAStateBundle = require('./nfa-dfa/dfa-state-bundle')
-	var Graph = require('bower_components/graph/src/directed-linked-graph')
+	var Graph = require('bower_components/algorithm-data-structure/src/graph/directed-linked-graph')
 	var map = require('bower_components/candy.js/src/map')
 	var EPSILON = '\0'
 
