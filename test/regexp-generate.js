@@ -26,10 +26,17 @@ define(function (require) {
 	})
 
 
-	test('unicode()', function (assert) {
-		var frag = generate.unicode()
+	//// 性能问题
+	//test('unicode()', function (assert) {
+	//	var frag = generate.unicode()
+	//	assert.ok(frag.test('中'))
+	//})
 
-		assert.ok(frag.test('中'))
+
+	test('ascii()', function (assert) {
+		var frag = generate.ascii()
+		assert.ok(frag.test('!'))
+		assert.ok(!frag.test('中'))
 	})
 
 })

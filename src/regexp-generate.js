@@ -1,5 +1,6 @@
 define(function (require, exports) {
 	var Fragment = require('./fragment')
+	var union = require('src/fragment/union')
 
 	/** \w */
 	exports.alphanumeric = function () {
@@ -28,13 +29,44 @@ define(function (require, exports) {
 
 	/** 1~65536 */
 	exports.unicode = function () {
-		var frag = new Fragment('\u0001')
-		for (var i = 2; i <= 10000; i++) {
-			console.log(i)
+		var frags = []
+		for (var i = 1; i <= 2000; i++) {
 			var ch = String.fromCharCode(i)
-			frag.union(new Fragment(ch))
+			frags.push(new Fragment(ch))
 		}
-		return frag
+		return union(frags)
 	}
 
+
+	/** 1~256 */
+	exports.ascii = function () {
+		var frags = []
+		for (var i = 1; i < 256; i++) {
+			var ch = String.fromCharCode(i)
+			frags.push(new Fragment(ch))
+		}
+		return union(frags)
+	}
+
+
+	/** 1~256 except `chs` */
+	exports.asciiExcept = function (chs) {
+		var frags = []
+		for (var i = 1; i < 256; i++) {
+			var ch = String.fromCharCode(i)
+			if (!_.contains(chs, ch)) {
+				frags.push(new Fragment(ch))
+			}
+		}
+		return union(frags)
+	}
+
+
+	exports.dot = function () {
+
+	}
+
+	exports.dotExcept = function () {
+
+	}
 })

@@ -126,6 +126,8 @@
 	 * BNF: rule = rule1 | rule2
 	 */
 	Fragment.prototype.union = function (other) {
+		other = new Fragment(other._copyConfig())
+
 		// when joining a to b, b should disambiguate itself from a
 		other._resolveCollisions(this)
 

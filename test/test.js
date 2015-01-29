@@ -16,7 +16,7 @@ define(function (require) {
 	require('./fragment/fragment')
 
 	require('./name-generate')
-	//require('./regexp-generate')
+	require('./regexp-generate')
 	//require('./eof')
 	//require('./errors')
 	//require('./readme')

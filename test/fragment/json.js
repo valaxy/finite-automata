@@ -1,11 +1,20 @@
-var test = require('tape'),
-	Fragment = require('../../src/fragment')
+define(function (require) {
+	var Fragment = require('src/fragment')
+	var regexpGenerate = require('src/regexp-generate')
+	var union = require('src/fragment/union')
 
 
-test('json', function (assert) {
-	// number = \d+
-	var number = Fragment.createSingleNumber().repeatAtLeastOnce()
+	test('json', function (assert) {
+		// number = \d+
+		var number = regexpGenerate.digit().repeatAtLeastOnce()
 
-	// string = '"' .*? '"'
+		// null
+		var null_ = new Fragment('null')
 
+		// bool
+		var bool = union([new Fragment('true'), new Fragment('false')])
+
+		// string = '"' .*? '"'
+
+	})
 })

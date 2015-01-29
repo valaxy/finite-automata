@@ -1,6 +1,7 @@
 define(function (require) {
 	var Fragment = require('../fragment')
 	var nameGenerate = require('../name-generate')
+	var EPSILON = '\0'
 
 	var unionMany = function (frags) {
 		if (frags.length == 0) {
@@ -16,9 +17,9 @@ define(function (require) {
 		// point new state to the others initial states with epsilon transitions
 		for (var i in frags) {
 			var frag = frags[i]
-			transitions[initial].push('\0', frag.initial)
+			transitions[initial].push(EPSILON, frag.initial)
 
-			// add all transitions from b to a
+			// add all transitions to this transitions
 			for (var from in frag.transitions) {
 				transitions[from] = frag.transitions[from]
 			}
