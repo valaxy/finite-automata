@@ -11,7 +11,8 @@
 	var Automata = require('./automata'),
 		minimize = require('./minimize/minimize'),
 		stringToDFA = require('./stringToDFA'),
-		nfaToDFA = require('./nfaToDFA')
+		nfaToDFA = require('./nfaToDFA'),
+		nameGenerate = require('./name-generate')
 
 
 	/**
@@ -33,31 +34,6 @@
 		this.initial = def.initial
 		this.accept = def.accept
 		this.transitions = def.transitions // it's matrix(邻接表)
-	}
-
-
-	/** \w */
-	Fragment.createSingleAlphaChar = function () {
-		var frag = new Fragment('a')
-		frag.union(new Fragment('A'))
-		for (var i = 1; i < 26; i++) {
-			var ch = String.fromCharCode(97 + i)
-			frag.union(new Fragment(ch))
-
-			ch = String.fromCharCode(65 + i)
-			frag.union(new Fragment(ch))
-		}
-		return frag
-	}
-
-	/** \d */
-	Fragment.createSingleNumber = function () {
-		var frag = new Fragment('0')
-		for (var i = 1; i < 10; i++) {
-			var ch = i + ''
-			frag.union(new Fragment(ch))
-		}
-		return frag
 	}
 
 
@@ -150,15 +126,13 @@
 	 * BNF: rule = rule1 | rule2
 	 */
 	Fragment.prototype.union = function (other) {
-		other = new Fragment(other._copyConfig())
-
 		// when joining a to b, b should disambiguate itself from a
 		other._resolveCollisions(this)
 
 		var oldInitial = this.initial
 
 		// create a new initial state
-		this.initial = this._findNoCollisionState('union')
+		this.initial = this._findNoCollisionState(nameGenerate())
 
 		// watch for collisions in both sides!
 		this.initial = other._findNoCollisionState(this.initial)

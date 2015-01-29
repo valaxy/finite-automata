@@ -10,11 +10,13 @@ define(function (require) {
 	require('./nfaToDFA')
 
 	require('./stringToDFA')
+	require('./fragment/union')
 	require('./fragment')
 	require('./fragment/repeat')
 	require('./fragment/fragment')
 
-
+	require('./name-generate')
+	//require('./regexp-generate')
 	//require('./eof')
 	//require('./errors')
 	//require('./readme')

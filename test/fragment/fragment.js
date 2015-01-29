@@ -76,7 +76,7 @@ define(function (require) {
 	})
 
 
-	test('Fragment#_resolveCollisions()|states()', function (assert) {
+	test('_resolveCollisions()|states()', function (assert) {
 		// q0 - "a" -> q1
 		var fragment1 = new Fragment({
 				initial: 'q0',
@@ -110,7 +110,7 @@ define(function (require) {
 	})
 
 
-	test('Fragment#concat()', function (assert) {
+	test('concat()', function (assert) {
 		// q0 - "a" -> q1
 		var fragment1 = new Fragment({
 				initial: 'q0',
@@ -150,7 +150,7 @@ define(function (require) {
 	})
 
 
-	test('Fragment#union()', function (assert) {
+	test('union()', function (assert) {
 		var fragment1 = new Fragment({
 				initial: 'union`', // force a collision
 				accept: ['q1'],
@@ -178,6 +178,16 @@ define(function (require) {
 		assert.ok(fragment1.test('a'), 'Union should accept solely first dfa')
 		assert.ok(fragment1.test('b'), 'Union should accept solely second dfa')
 		assert.ok(!fragment1.test('ab'), 'Union should not accept concatenated dfa')
+	})
+
+
+	test('repeatAtleastOnce()', function (assert) {
+		var frag = new Fragment('ab')
+		frag.repeatAtLeastOnce()
+
+		assert.ok(frag.test('ab'))
+		assert.ok(frag.test('abab'))
+		assert.ok(!frag.test(''))
 	})
 
 
@@ -312,36 +322,5 @@ define(function (require) {
 		t.ok(nfa.test('cowdogcatcat'))
 	})
 
-
-	test('Fragment#repeatAtleastOnce()', function (assert) {
-		var frag = new Fragment('ab')
-		frag.repeatAtLeastOnce()
-
-		assert.ok(frag.test('ab'))
-		assert.ok(frag.test('abab'))
-		assert.ok(!frag.test(''))
-	})
-
-
-	test('Fragment.createSingleAlphaChar()', function (assert) {
-		var frag = Fragment.createSingleAlphaChar()
-
-		assert.ok(frag.test('a'))
-		assert.ok(frag.test('z'))
-		assert.ok(frag.test('A'))
-		assert.ok(frag.test('Z'))
-		assert.ok(!frag.test('!'))
-		assert.ok(!frag.test('aa'))
-	})
-
-
-	test('Fragment.createSingleNumber()', function (assert) {
-		var frag = Fragment.createSingleNumber()
-
-		assert.ok(frag.test('0'))
-		assert.ok(frag.test('9'))
-		assert.ok(!frag.test('a'))
-		assert.ok(!frag.test('01'))
-	})
 
 })
